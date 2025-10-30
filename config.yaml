@@ -1,0 +1,43 @@
+# 眼底检查系统配置文件
+
+# 数据库配置
+database:
+  host: "111.229.22.40"
+  port: 15432
+  user: "cw"
+  password: "741856252"
+  dbname: "eyes_db"
+  sslmode: "disable"
+  timezone: "Asia/Shanghai"
+  # 连接池配置
+  max_idle_conns: 10      # 最大空闲连接数
+  max_open_conns: 100     # 最大打开连接数
+  conn_max_lifetime: 3600 # 连接最大生存时间（秒）
+  log_level: "debug"     # 数据库日志级别
+
+# go服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+# 第三方服务配置
+third_party:
+  base_url: "http://localhost"  # 第三方服务基础URL
+  port: 25512                   # 第三方服务端口
+  timeout: 30                   # 请求超时时间（秒）
+  retry_count: 3                # 重试次数
+
+# JWT配置
+jwt:
+  secret_key: "eyes_remk_jwt_secret_key_2024"
+  token_expire_hours: 24
+
+# 日志配置
+logging:
+  level: "debug"        # 日志级别: trace, debug, info, warn, error, fatal, panic
+  format: "text"       # 日志格式: text 或 json
+  output: "file"     # 输出: stdout 或 file
+  file_path: "./logs/app.log" # 当 output 为 file 时使用
+  report_caller: false  # 是否显示调用者信息
+
+save_folder_path: "/mnt/tmp/"
