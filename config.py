@@ -55,7 +55,9 @@ class LoggingConfig:
     output: str
     file_path: str
     report_caller: bool
-
+    rotation: str
+    retention: str
+    compression: str
 
 @dataclass
 class AppConfig:
@@ -170,7 +172,10 @@ class Config:
                     format=config_data['logging']['format'],
                     output=config_data['logging']['output'],
                     file_path=config_data['logging']['file_path'],
-                    report_caller=config_data['logging']['report_caller']
+                    report_caller=config_data['logging']['report_caller'],
+                    rotation=config_data['logging']['rotation'],
+                    retention=config_data['logging']['retention'],
+                    compression=config_data['logging']['compression']
                 ),
                 save_folder_path=config_data['save_folder_path']
             )
