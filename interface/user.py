@@ -1,96 +1,63 @@
-"""
-用户管理API
-"""
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-
-from database import db, DatabaseError
+from fastapi import APIRouter, HTTPException, Depends, Query
+from sqlalchemy.orm import Session
 from models.user import User
+from database import get_db
+from typing import List
 
 router = APIRouter()
 
+@router.post("/users", response_model=dict)
+def create_user(user: User, db: Session = Depends(get_db)):
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"code": 200, "msg": "success", "data": {"user_id": user.id}}
 
-class UserCreate(BaseModel):
-    """用户创建模型"""
-    username: str
-    password: str
-    email: str
-    full_name: str
-    user_type: str
-    status: str = "active"
+@router.get("/users/{user_id}", response_model=dict)
+def find_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户未找到")
+    return {"code": 200, "msg": "success", "data": user}
 
+@router.get("/users", response_model=dict)
+def list_users(
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
+    db: Session = Depends(get_db),
+):
+    offset = (page - 1) * page_size
+    users = db.query(User).offset(offset).limit(page_size).all()
+    total = db.query(User).count()
+    return {
+        "code": 200,
+        "msg": "success",
+        "data": {
+            "users": users,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+            },
+        },
+    }
 
-class UserResponse(BaseModel):
-    """用户响应模型"""
-    id: int
-    username: str
-    email: str
-    full_name: str
-    user_type: str
-    status: str
+@router.put("/users/{user_id}", response_model=dict)
+def update_user(user_id: int, user_data: dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户未找到")
+    for key, value in user_data.items():
+        setattr(user, key, value)
+    db.commit()
+    return {"code": 200, "msg": "success", "data": {}}
 
-    class Config:
-        from_attributes = True
-
-
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_data: UserCreate):
-    """创建新用户"""
-    try:
-        # 检查用户名是否已存在
-        existing_users = db.find(User, username=user_data.username)
-        if existing_users:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="用户名已存在"
-            )
-        
-        # 创建新用户
-        new_user = User(
-            username=user_data.username,
-            password_hash=user_data.password,  # 实际应用中应该对密码进行哈希处理
-            email=user_data.email,
-            full_name=user_data.full_name,
-            user_type=user_data.user_type,
-            status=user_data.status
-        )
-        
-        created_user = db.create(new_user)
-        return created_user
-    except DatabaseError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"数据库错误: {str(e)}"
-        )
-
-
-@router.get("/", response_model=List[UserResponse])
-async def get_users():
-    """获取所有用户"""
-    try:
-        users = db.get_all(User)
-        return users
-    except DatabaseError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"数据库错误: {str(e)}"
-        )
-
-
-@router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int):
-    """根据ID获取用户"""
-    try:
-        user = db.get_by_id(User, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"用户ID {user_id} 不存在"
-            )
-        return user
-    except DatabaseError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"数据库错误: {str(e)}"
-        )
+@router.delete("/users", response_model=dict)
+def delete_users(user_ids: List[int], db: Session = Depends(get_db)):
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    if not users:
+        raise HTTPException(status_code=404, detail="用户未找到")
+    for user in users:
+        user.deleted_at = "CURRENT_TIMESTAMP"
+    db.commit()
+    return {"code": 200, "msg": "success", "data": {"deleted_count": len(users)}}
