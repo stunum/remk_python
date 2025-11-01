@@ -1,45 +1,62 @@
 """
-挂号登记模型
+挂号登记管理模型
 """
-from sqlalchemy import Column, Integer, String, Date, Time, Text, ForeignKey, Enum, Numeric, DateTime
-from sqlalchemy.orm import relationship
-from .base import Base, TimestampMixin, SoftDeleteMixin, AuditMixin
+from datetime import datetime, date, time
+from typing import Optional
+from decimal import Decimal
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, Date, Time, Text, CheckConstraint, Numeric, Integer, DateTime, text
 
-class Registration(Base, TimestampMixin, SoftDeleteMixin, AuditMixin):
-    """挂号表:管理患者挂号与预约流程"""
+class Registration(SQLModel, table=True):
+    """挂号表:管理患者挂号与预约流程(可选择性地关联检查记录)"""
     __tablename__ = 'registrations'
-
-    id = Column(Integer, primary_key=True)
-    registration_number = Column(String(50), nullable=False, unique=True)
-    patient_id = Column(Integer, ForeignKey('patients.id'), nullable=False)
-    examination_type_id = Column(Integer, ForeignKey('examination_types.id'), nullable=False)
-    doctor_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'))
-    examination_id = Column(Integer, ForeignKey('examinations.id', ondelete='SET NULL'), unique=True)
-    department = Column(String(100))
-    registration_date = Column(Date, nullable=False)
-    registration_time = Column(Time)
-    scheduled_date = Column(Date, nullable=False)
-    scheduled_time = Column(Time)
-    priority = Column(Enum('urgent', 'high', 'normal', 'low', name='priority_type'), default='normal')
-    registration_type = Column(Enum('emergency', 'appointment', 'normal', 'followup', name='registration_type'), default='normal')
-    status = Column(Enum('unsigned', 'checked_in', 'cancelled', name='registration_status'), nullable=False, default='unsigned')
-    registration_fee = Column(Numeric(10, 2))
-    payment_status = Column(Enum('unpaid', 'paid', 'refunded', name='payment_status'), default='unpaid')
-    payment_method = Column(String(20))
-    chief_complaint = Column(Text)
-    present_illness = Column(Text)
-    referral_doctor = Column(String(100))
-    referral_hospital = Column(String(200))
-    notes = Column(Text)
-    check_in_time = Column(DateTime(timezone=True))
-    queue_number = Column(Integer)
-    estimated_wait_time = Column(Integer)
     
-    # 关系
-    patient = relationship("Patient", back_populates="registrations")
-    examination_type = relationship("ExaminationType", back_populates="registrations")
-    doctor = relationship("User", foreign_keys=[doctor_id], back_populates="doctor_registrations")
-    examination = relationship("Examination", back_populates="registration")
+    id: Optional[int] = Field(default=None, primary_key=True)
+    registration_number: str = Field(max_length=50, unique=True, index=True)
+    patient_id: int = Field(foreign_key="patients.id", index=True)
+    examination_type_id: int = Field(foreign_key="examination_types.id")
+    doctor_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
+    examination_id: Optional[int] = Field(default=None, foreign_key="examinations.id", unique=True, index=True)
+    department: Optional[str] = Field(default=None, max_length=100)
+    registration_date: date = Field(sa_column=Column(Date, nullable=False, index=True))
+    registration_time: Optional[time] = Field(default=None, sa_column=Column(Time))
+    scheduled_date: date = Field(sa_column=Column(Date, nullable=False, index=True))
+    scheduled_time: Optional[time] = Field(default=None, sa_column=Column(Time))
+    priority: str = Field(default='normal', max_length=20)
+    registration_type: str = Field(default='normal', max_length=20)
+    status: str = Field(default='unsigned', max_length=20, index=True)
+    registration_fee: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(10, 2)))
+    payment_status: str = Field(default='unpaid', max_length=20)
+    payment_method: Optional[str] = Field(default=None, max_length=20)
+    chief_complaint: Optional[str] = Field(default=None, sa_column=Column(Text))
+    present_illness: Optional[str] = Field(default=None, sa_column=Column(Text))
+    referral_doctor: Optional[str] = Field(default=None, max_length=100)
+    referral_hospital: Optional[str] = Field(default=None, max_length=200)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    check_in_time: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    queue_number: Optional[int] = Field(default=None, sa_column=Column(Integer, index=True))
+    estimated_wait_time: Optional[int] = Field(default=None, sa_column=Column(Integer))
+    deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    created_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, server_default=text('CURRENT_TIMESTAMP'))
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, server_default=text('CURRENT_TIMESTAMP'))
+    )
+    created_by: Optional[int] = Field(default=None, foreign_key="users.id")
+    updated_by: Optional[int] = Field(default=None, foreign_key="users.id")
+    
+    __table_args__ = (
+        CheckConstraint("priority IN ('urgent', 'high', 'normal', 'low')", name='check_priority'),
+        CheckConstraint("registration_type IN ('emergency', 'appointment', 'normal', 'followup')", name='check_registration_type'),
+        CheckConstraint("status IN ('unsigned', 'checked_in', 'cancelled')", name='check_registration_status'),
+        CheckConstraint("registration_fee >= 0", name='check_registration_fee'),
+        CheckConstraint("payment_status IN ('unpaid', 'paid', 'refunded')", name='check_payment_status'),
+        CheckConstraint("queue_number >= 0", name='check_queue_number'),
+        CheckConstraint("estimated_wait_time >= 0", name='check_estimated_wait_time'),
+    )
     
     def __repr__(self):
         return f"<Registration(id={self.id}, registration_number='{self.registration_number}')>"

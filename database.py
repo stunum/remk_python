@@ -1,5 +1,5 @@
 """
-数据库连接模块 - 使用SQLAlchemy和psycopg-binary连接PostgreSQL数据库
+数据库连接模块 - 使用SQLModel和psycopg连接PostgreSQL数据库
 实现连接池、单例模式和自动断线重连功能
 """
 import time
@@ -8,14 +8,13 @@ from contextlib import contextmanager
 
 from sqlalchemy import create_engine, text, exc
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
-from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.pool import QueuePool
+from sqlmodel import SQLModel
 
 from config import config, ConfigError
-from models.base import Base
 
 # 定义泛型类型变量，用于ORM操作方法的类型提示
-T = TypeVar('T', bound=Base)
+T = TypeVar('T', bound=SQLModel)
 
 
 class DatabaseError(Exception):
@@ -26,7 +25,7 @@ class DatabaseError(Exception):
 class Database:
     """
     数据库连接类 - 单例模式
-    使用SQLAlchemy和psycopg-binary连接PostgreSQL数据库
+    使用SQLModel和psycopg连接PostgreSQL数据库
     实现连接池、单例模式和自动断线重连功能
     """
     _instance = None
@@ -144,18 +143,20 @@ class Database:
     def create_tables(self):
         """
         创建所有模型对应的数据库表
+        注意：需要先导入所有模型类，确保它们被注册到SQLModel.metadata
         """
         try:
-            Base.metadata.create_all(self._engine)
+            SQLModel.metadata.create_all(self._engine)
         except Exception as e:
             raise DatabaseError(f"创建数据库表失败: {str(e)}")
 
     def drop_tables(self):
         """
         删除所有模型对应的数据库表
+        注意：需要先导入所有模型类，确保它们被注册到SQLModel.metadata
         """
         try:
-            Base.metadata.drop_all(self._engine)
+            SQLModel.metadata.drop_all(self._engine)
         except Exception as e:
             raise DatabaseError(f"删除数据库表失败: {str(e)}")
 
@@ -281,51 +282,65 @@ except DatabaseError as e:
     # 例如退出程序或使用备用数据库
     raise
 
-
-# 使用示例
-if __name__ == "__main__":
-    from models.user import User
-    
+def get_db():
+    """
+    FastAPI依赖项：获取数据库会话
+    用法: session: Session = Depends(get_db)
+    """
+    session = db._session_factory()
     try:
-        # 创建表
-        db.create_tables()
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+# # 使用示例
+# if __name__ == "__main__":
+#     from models.user import User
+    
+#     try:
+#         # 创建表
+#         db.create_tables()
         
-        # 创建用户
-        new_user = User(
-            username="admin",
-            password_hash="hashed_password",
-            email="admin@example.com",
-            full_name="Administrator",
-            user_type="admin",
-            status="active"
-        )
-        created_user = db.create(new_user)
-        print(f"创建用户成功: ID={created_user.id}, 用户名={created_user.username}")
+#         # 创建用户
+#         new_user = User(
+#             username="admin",
+#             password_hash="hashed_password",
+#             email="admin@example.com",
+#             full_name="Administrator",
+#             user_type="admin",
+#             status="active"
+#         )
+#         created_user = db.create(new_user)
+#         print(f"创建用户成功: ID={created_user.id}, 用户名={created_user.username}")
         
-        # 查询用户
-        user = db.get_by_id(User, created_user.id)
-        print(f"查询用户成功: ID={user.id}, 用户名={user.username}")
+#         # 查询用户
+#         user = db.get_by_id(User, created_user.id)
+#         print(f"查询用户成功: ID={user.id}, 用户名={user.username}")
         
-        # 更新用户
-        user.email = "updated@example.com"
-        updated_user = db.update(user)
-        print(f"更新用户成功: ID={updated_user.id}, 邮箱={updated_user.email}")
+#         # 更新用户
+#         user.email = "updated@example.com"
+#         updated_user = db.update(user)
+#         print(f"更新用户成功: ID={updated_user.id}, 邮箱={updated_user.email}")
         
-        # 查询所有用户
-        all_users = db.get_all(User)
-        print(f"查询所有用户成功: 用户数量={len(all_users)}")
+#         # 查询所有用户
+#         all_users = db.get_all(User)
+#         print(f"查询所有用户成功: 用户数量={len(all_users)}")
         
-        # 根据条件查询用户
-        admin_users = db.find(User, user_type="admin")
-        print(f"查询管理员用户成功: 用户数量={len(admin_users)}")
+#         # 根据条件查询用户
+#         admin_users = db.find(User, user_type="admin")
+#         print(f"查询管理员用户成功: 用户数量={len(admin_users)}")
         
-        # 删除用户
-        deleted = db.delete_by_id(User, created_user.id)
-        print(f"删除用户{'成功' if deleted else '失败'}")
+#         # 删除用户
+#         deleted = db.delete_by_id(User, created_user.id)
+#         print(f"删除用户{'成功' if deleted else '失败'}")
         
-        # 执行原始SQL查询
-        result = db.execute_raw_sql("SELECT COUNT(*) as user_count FROM users")
-        print(f"用户总数: {result[0]['user_count']}")
+#         # 执行原始SQL查询
+#         result = db.execute_raw_sql("SELECT COUNT(*) as user_count FROM users")
+#         print(f"用户总数: {result[0]['user_count']}")
         
-    except DatabaseError as e:
-        print(f"数据库操作失败: {str(e)}")
+#     except DatabaseError as e:
+#         print(f"数据库操作失败: {str(e)}")

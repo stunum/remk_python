@@ -1,40 +1,48 @@
 """
-检查记录模型
+检查记录管理模型
 """
-from sqlalchemy import Column, Integer, String, Date, Time, Text, ForeignKey, Enum
-from sqlalchemy.orm import relationship
-from .base import Base, TimestampMixin, SoftDeleteMixin, AuditMixin
+from datetime import datetime, date, time
+from typing import Optional
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, Date, Time, Text, CheckConstraint, DateTime, text
 
-class Examination(Base, TimestampMixin, SoftDeleteMixin, AuditMixin):
-    """检查记录表:记录每次眼底检查的基本信息和结果"""
+class Examination(SQLModel, table=True):
+    """检查记录表:记录每次眼底检查的基本信息和结果(可独立存在或与挂号关联)"""
     __tablename__ = 'examinations'
-
-    id = Column(Integer, primary_key=True)
-    examination_number = Column(String(50), nullable=False, unique=True)
-    patient_id = Column(Integer, ForeignKey('patients.id'), nullable=False)
-    examination_type_id = Column(Integer, ForeignKey('examination_types.id'), nullable=False)
-    doctor_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'))
-    technician_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'))
-    examination_date = Column(Date, nullable=False)
-    examination_time = Column(Time)
-    eye_side = Column(Enum('left', 'right', 'both', name='eye_side_type'))
-    chief_complaint = Column(Text)
-    present_illness = Column(Text)
-    examination_findings = Column(Text)
-    preliminary_diagnosis = Column(Text)
-    recommendations = Column(Text)
-    follow_up_date = Column(Date)
-    status = Column(Enum('pending', 'in_progress', 'completed', 'cancelled', name='examination_status'), 
-                   nullable=False, default='pending')
-    notes = Column(Text)
     
-    # 关系
-    patient = relationship("Patient", back_populates="examinations")
-    examination_type = relationship("ExaminationType", back_populates="examinations")
-    doctor = relationship("User", foreign_keys=[doctor_id], back_populates="doctor_examinations")
-    technician = relationship("User", foreign_keys=[technician_id], back_populates="technician_examinations")
-    registration = relationship("Registration", back_populates="examination", uselist=False)
-    fundus_images = relationship("FundusImage", back_populates="examination", cascade="all, delete-orphan")
+    id: Optional[int] = Field(default=None, primary_key=True)
+    examination_number: str = Field(max_length=50, unique=True, index=True)
+    patient_id: int = Field(foreign_key="patients.id", index=True)
+    examination_type_id: int = Field(foreign_key="examination_types.id")
+    doctor_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
+    technician_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    examination_date: date = Field(sa_column=Column(Date, nullable=False, index=True))
+    examination_time: Optional[time] = Field(default=None, sa_column=Column(Time))
+    eye_side: Optional[str] = Field(default=None, max_length=10)
+    chief_complaint: Optional[str] = Field(default=None, sa_column=Column(Text))
+    present_illness: Optional[str] = Field(default=None, sa_column=Column(Text))
+    examination_findings: Optional[str] = Field(default=None, sa_column=Column(Text))
+    preliminary_diagnosis: Optional[str] = Field(default=None, sa_column=Column(Text))
+    recommendations: Optional[str] = Field(default=None, sa_column=Column(Text))
+    follow_up_date: Optional[date] = Field(default=None, sa_column=Column(Date))
+    status: str = Field(default='pending', max_length=20, index=True)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    created_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, server_default=text('CURRENT_TIMESTAMP'))
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, server_default=text('CURRENT_TIMESTAMP'))
+    )
+    created_by: Optional[int] = Field(default=None, foreign_key="users.id")
+    updated_by: Optional[int] = Field(default=None, foreign_key="users.id")
+    
+    __table_args__ = (
+        CheckConstraint("eye_side IN ('left', 'right', 'both')", name='check_eye_side'),
+        CheckConstraint("status IN ('pending', 'in_progress', 'completed', 'cancelled')", name='check_examination_status'),
+    )
     
     def __repr__(self):
         return f"<Examination(id={self.id}, examination_number='{self.examination_number}')>"

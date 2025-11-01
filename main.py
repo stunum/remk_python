@@ -69,9 +69,11 @@ def create_app() -> FastAPI:
         log.debug("健康检查请求")
         return {"status": "ok"}
     
-
-    
     return app
+
+
+# 创建应用实例（模块级别），供uvicorn直接使用
+app = create_app()
 
 
 def main():
@@ -84,16 +86,14 @@ def main():
         server_config = config.config.server
         log.info(f"服务器配置: host={server_config.host}, port={server_config.port}")
         
-        # 创建FastAPI应用
-        app = create_app()
-        
         # 启动服务器
         log.info(f"启动服务器: http://{server_config.host}:{server_config.port}")
         uvicorn.run(
-            app,
+            "main:app",  # 使用字符串引用，避免重复创建app实例
             host=server_config.host,
             port=server_config.port,
-            log_level="info"
+            log_level="info",
+            reload=True  # 开发模式下启用热重载
         )
     except Exception as e:
         log.exception(f"服务器启动失败: {str(e)}")

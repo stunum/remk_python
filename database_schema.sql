@@ -510,7 +510,6 @@ CREATE TABLE user_roles (
     assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,   -- 分配人
     is_active BOOLEAN DEFAULT true,                            -- 是否有效
     deleted_at TIMESTAMPTZ,                                      -- 软删除时间戳(带时区)
-    UNIQUE(user_id, role_id)                                  -- 用户-角色唯一约束
 );
 COMMENT ON TABLE user_roles IS '用户角色关联表:管理用户与角色的关系';
 COMMENT ON COLUMN user_roles.id IS '关联ID';
@@ -649,6 +648,11 @@ CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_i
 CREATE INDEX idx_role_permissions_deleted_at ON role_permissions(deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX idx_system_logs_user_id ON system_logs(user_id);
 CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
+
+-- ✅ 创建部分唯一索引：仅在 deleted_at IS NULL 时生效
+CREATE UNIQUE INDEX idx_user_roles_unique_active
+ON user_roles(user_id, role_id)
+WHERE deleted_at IS NULL;
 
 -- 条件唯一索引:只对医生用户要求执业证书号唯一
 CREATE UNIQUE INDEX unique_doctor_license 
