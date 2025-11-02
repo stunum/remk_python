@@ -10,3 +10,5 @@ wheels/
 .venv
 frontend/
 frontend/node_modules/
+.cursor/
+.trae/
