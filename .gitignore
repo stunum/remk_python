@@ -10,3 +10,4 @@ wheels/
 .venv
 frontend/
 frontend/node_modules/
+ai/model.onnx
