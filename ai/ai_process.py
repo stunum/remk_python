@@ -2,18 +2,30 @@ import os
 import sys
 import cv2
 import numpy as np
+import platform
 
 # 强制添加当前目录到 Python 路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
 print(f"Current directory: {current_dir}")
+print(f"Operating System: {platform.system()}")
+print(f"Python Version: {sys.version_info.major}.{sys.version_info.minor}")
 
 try:
-    from ai import rgb_image_generate
+    # 直接导入当前目录的模块（不要使用 from ai import）
+    import rgb_image_generate
     print("✓ Successfully imported rgb_image_generate")
 except ImportError as e:
     print(f"✗ Failed to import rgb_image_generate: {e}")
+    print(f"  请确保:")
+    if platform.system() == "Windows":
+        print(f"  1. 存在 rgb_image_generate.pyd 文件")
+        print(f"  2. Python 版本为 3.10")
+        print(f"  3. 已安装 Visual C++ Redistributable")
+    else:
+        print(f"  1. 存在 rgb_image_generate.so 文件")
+        print(f"  2. 动态库与系统架构匹配")
     sys.exit(1)
 
 # 初始化模型
