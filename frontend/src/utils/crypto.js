@@ -4,6 +4,7 @@
  */
 
 import CryptoJS from 'crypto-js';
+import { PASSWORD_SALT } from '@/config/security';
 
 // 加密密钥（实际项目中应该从配置获取）
 const SECRET_KEY = 'eyes_remk_crypto_key_2024';
@@ -52,13 +53,14 @@ export function encryptPassword(password) {
 }
 
 /**
- * 简单密码哈希（用于客户端验证）
+ * 简单密码哈希（用于登录）
+ * 注意：必须与后端的 PASSWORD_SALT 保持一致
  * @param {string} password 原始密码
  * @returns {string} 哈希后的密码
  */
 export function hashPassword(password) {
-  // 添加固定盐值
-  const saltedPassword = password + 'eyes_remk_salt_2024';
+  // 使用与后端相同的盐值（从配置文件导入）
+  const saltedPassword = password + PASSWORD_SALT;
   return sha256Hash(saltedPassword);
 }
 

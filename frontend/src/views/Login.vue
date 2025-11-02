@@ -76,14 +76,15 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
-import { User, Lock } from '@element-plus/icons-vue';
 import { useUserStore } from '@/store/modules/user';
 import { authAPI } from '@/api/auth';
 import { hashPassword } from '@/utils/crypto';
 
+// 路由和状态管理
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 
 // 响应式数据
@@ -147,20 +148,21 @@ const handleLogin = async () => {
       console.log('用户登录状态:', userStore.isLoggedIn);
       console.log('令牌信息:', userStore.token ? '存在' : '不存在');
 
-      message.success(response.message || '登录成功');
+      message.success(response.msg || response.message || '登录成功');
       
       // 延迟跳转，让用户看到成功消息
       setTimeout(() => {
-        console.log('准备跳转到/index页面');
+        // 检查是否有重定向参数
+        const redirectPath = route.query.redirect || '/index/patients';
+        console.log('准备跳转到:', redirectPath);
         console.log('当前认证状态:', userStore.isAuthenticated);
-        console.log('当前路由:', router.currentRoute.value.path);
-        console.log('路由器实例:', router);
-        console.log('所有路由:', router.getRoutes().map(r => ({ path: r.path, name: r.name })));
         
-        router.push('/index').then(() => {
+        router.push(redirectPath).then(() => {
           console.log('跳转成功，当前路由:', router.currentRoute.value.path);
         }).catch(error => {
           console.error('跳转失败:', error);
+          // 如果跳转失败，回退到病人管理页面
+          router.push('/index/patients');
         });
       }, 500);
       
@@ -180,7 +182,9 @@ const handleLogin = async () => {
 onMounted(() => {
   // 检查是否已登录
   if (userStore.isLoggedIn) {
-    router.push('/index');
+    // 如果有重定向参数，跳转到重定向页面，否则跳转到病人管理
+    const redirectPath = route.query.redirect || '/index/patients';
+    router.push(redirectPath);
     return;
   }
 

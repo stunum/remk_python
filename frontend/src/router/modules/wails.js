@@ -14,7 +14,7 @@ export default [
     path: '/index',
     name: 'index',
     component: () => import('@/views/Index.vue'),
-    redirect: '/index/dashboard',
+    redirect: '/index/patients',
     meta: {
       title: '首页',
       requiresAuth: true

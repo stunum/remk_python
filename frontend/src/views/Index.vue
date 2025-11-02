@@ -122,7 +122,8 @@ const updateSelectedKeys = () => {
   } else if (path.includes('/settings')) {
     selectedKeys.value = ['settings'];
   } else {
-    selectedKeys.value = ['dashboard'];
+    // selectedKeys.value = ['dashboard'];
+    selectedKeys.value = ['view-images'];
   }
 };
 

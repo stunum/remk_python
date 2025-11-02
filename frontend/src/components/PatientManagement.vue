@@ -520,19 +520,35 @@ const fetchPatients = async () => {
   try {
     const params = {
       page: pagination.current,
-      pageSize: pagination.pageSize,
-      search: searchForm.name || searchForm.patientId,
-      orderBy: 'created_at',
-      order: 'desc'
+      pageSize: pagination.pageSize
     };
+    
+    // 添加搜索参数
+    if (searchForm.name) {
+      params.name = searchForm.name;
+    }
+    if (searchForm.patientId) {
+      params.patient_id = searchForm.patientId;
+    }
 
     const response = await patientAPI.getPatients(params);
     
     if (isResponseSuccess(response)) {
-      allPatients.value = response.data.data || [];
-      pagination.total = response.data.total || 0;
-      pagination.current = response.data.page || 1;
-      pagination.pageSize = response.data.page_size || 10;
+      // 后端返回格式: { code: 200, msg: 'success', data: { patients: [...], pagination: {...} } }
+      const responseData = response.data;
+      if (responseData && responseData.patients) {
+        allPatients.value = responseData.patients;
+        
+        // 更新分页信息
+        if (responseData.pagination) {
+          pagination.total = responseData.pagination.total || 0;
+          pagination.current = responseData.pagination.page || 1;
+          pagination.pageSize = responseData.pagination.page_size || 10;
+        }
+      } else {
+        allPatients.value = [];
+        pagination.total = 0;
+      }
     } else {
       console.warn('API调用失败', response);
       message.error(getResponseMessage(response) || '获取数据失败');
@@ -575,20 +591,19 @@ const savePatient = async () => {
     await drawerFormRef.value.validate();
     submitLoading.value = true;
     
-    // 准备更新数据，只发送可编辑的字段
+    // 准备更新数据，只发送需要更新的字段（后端只会更新提供的字段）
     const updateData = {
-      patient_id: selectedPatient.patient_id,
       name: selectedPatient.name,
       gender: selectedPatient.gender,
       birth_date: formatDateForAPI(selectedPatient.birth_date),
-      phone: selectedPatient.phone,
-      email: selectedPatient.email,
-      address: selectedPatient.address,
-      emergency_contact: selectedPatient.emergency_contact,
-      emergency_phone: selectedPatient.emergency_phone,
-      medical_history: selectedPatient.medical_history,
-      allergies: selectedPatient.allergies,
-      current_medications: selectedPatient.current_medications,
+      phone: selectedPatient.phone || null,
+      email: selectedPatient.email || null,
+      address: selectedPatient.address || null,
+      emergency_contact: selectedPatient.emergency_contact || null,
+      emergency_phone: selectedPatient.emergency_phone || null,
+      medical_history: selectedPatient.medical_history || null,
+      allergies: selectedPatient.allergies || null,
+      current_medications: selectedPatient.current_medications || null,
       status: selectedPatient.status
     };
     
@@ -647,6 +662,7 @@ const startNewExamination = async (record) => {
     message.destroy();
     
     if (isResponseSuccess(response)) {
+      // 后端返回格式: { code: 200, msg: 'success', data: {...examination_data...} }
       const examination = response.data;
       console.log('检查记录创建成功:', examination);
       
@@ -664,16 +680,16 @@ const startNewExamination = async (record) => {
       // 准备检查记录信息
       const examinationInfo = {
         id: examination.id,
-        examination_type_id: 1,
+        examination_type_id: examination.examination_type_id || 1,
         examination_type: '眼底检查',
         department: '眼科',
-        doctor_id: null,
+        doctor_id: examination.doctor_id || null,
         doctor_name: '',
         scheduled_date: examinationDate.toISOString().split('T')[0],
         scheduled_time: '',
         priority: 'normal',
-        notes: '',
-        eye_side: 'both'
+        notes: examination.notes || '',
+        eye_side: examination.eye_side || 'both'
       };
 
       // 存储到pinia store
