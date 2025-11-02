@@ -7,8 +7,11 @@ requires-python = ">=3.10.19"
 dependencies = [
     "fastapi>=0.120.3",
     "loguru>=0.7.3",
+    "passlib[bcrypt]>=1.7.4",
     "psycopg>=3.2.12",
     "psycopg-binary>=3.2.12",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.20",
     "pyyaml>=6.0.3",
     "sqlmodel>=0.0.27",
     "uvicorn>=0.38.0",

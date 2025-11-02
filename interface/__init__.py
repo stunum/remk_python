@@ -7,6 +7,7 @@ from fastapi import APIRouter
 api_router = APIRouter()
 
 # 导入并包含所有子路由器
+from .auth import router as auth_router
 from .user import router as user_router
 from .patient import router as patient_router
 from .examination import router as examination_router
@@ -19,6 +20,7 @@ from .role_permission import router as role_permission_router
 from .system_log import router as system_log_router
 
 # 注册所有子路由器
+api_router.include_router(auth_router, prefix="/auth", tags=["认证管理"])
 api_router.include_router(user_router, prefix="/users", tags=["用户管理"])
 api_router.include_router(patient_router, prefix="/patients", tags=["患者管理"])
 api_router.include_router(examination_router, prefix="/examinations", tags=["检查管理"])
