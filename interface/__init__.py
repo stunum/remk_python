@@ -13,6 +13,7 @@ from .patient import router as patient_router
 from .examination import router as examination_router
 from .registration import router as registration_router
 from .fundus_image import router as fundus_image_router
+from .fundus_image_save import router as fundus_image_save_router
 from .role import router as role_router
 from .permission import router as permission_router
 from .user_role import router as user_role_router
@@ -26,6 +27,7 @@ api_router.include_router(patient_router, prefix="/patients", tags=["患者管�
 api_router.include_router(examination_router, prefix="/examinations", tags=["检查管理"])
 api_router.include_router(registration_router, prefix="/registrations", tags=["挂号管理"])
 api_router.include_router(fundus_image_router, prefix="/fundus-images", tags=["眼底图像管理"])
+api_router.include_router(fundus_image_save_router, prefix="/images", tags=["图像保存"])
 api_router.include_router(role_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(permission_router, prefix="/permissions", tags=["权限管理"])
 api_router.include_router(user_role_router, prefix="/user-roles", tags=["用户角色关联"])
