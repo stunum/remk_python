@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Generic, Union
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, text, exc
-from sqlalchemy.orm import sessionmaker, scoped_session, Session
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from sqlmodel import SQLModel
 
@@ -67,11 +67,13 @@ class Database:
             )
             
             # 创建会话工厂
-            self._session_factory = scoped_session(sessionmaker(
+            # 注意：在FastAPI异步环境中不使用scoped_session，因为它基于线程本地存储
+            # 多个异步请求可能在同一线程中执行，导致会话共享问题
+            self._session_factory = sessionmaker(
                 autocommit=False,
                 autoflush=False,
                 bind=self._engine
-            ))
+            )
             
         except (ConfigError, Exception) as e:
             raise DatabaseError(f"数据库初始化失败: {str(e)}")

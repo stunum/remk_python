@@ -173,22 +173,37 @@ def list_patients(
     
     offset = (page - 1) * page_size
     
-    # 构建查询，排除软删除的患者
-    query = db.query(Patient).filter(Patient.deleted_at.is_(None))
+    # 构建查询用于计算总数，排除软删除的患者
+    count_query = db.query(Patient).filter(Patient.deleted_at.is_(None))
     
     # 添加筛选条件
     if status:
-        query = query.filter(Patient.status == status)
+        count_query = count_query.filter(Patient.status == status)
     if gender:
-        query = query.filter(Patient.gender == gender)
+        count_query = count_query.filter(Patient.gender == gender)
     if name:
-        query = query.filter(Patient.name.like(f"%{name}%"))
+        count_query = count_query.filter(Patient.name.like(f"%{name}%"))
     if patient_id:
-        query = query.filter(Patient.patient_id.like(f"%{patient_id}%"))
+        count_query = count_query.filter(Patient.patient_id.like(f"%{patient_id}%"))
     
-    # 获取总数和分页数据
-    total = query.count()
-    patients = query.order_by(Patient.created_at.desc()).offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(Patient).filter(Patient.deleted_at.is_(None))
+    
+    # 添加筛选条件
+    if status:
+        data_query = data_query.filter(Patient.status == status)
+    if gender:
+        data_query = data_query.filter(Patient.gender == gender)
+    if name:
+        data_query = data_query.filter(Patient.name.like(f"%{name}%"))
+    if patient_id:
+        data_query = data_query.filter(Patient.patient_id.like(f"%{patient_id}%"))
+    
+    # 获取分页数据
+    patients = data_query.order_by(Patient.created_at.desc()).offset(offset).limit(page_size).all()
     
     log.debug(f"查询到 {total} 个患者，当前页 {len(patients)} 个")
     

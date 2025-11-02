@@ -100,34 +100,61 @@ def list_system_logs(
     
     offset = (page - 1) * page_size
     
-    # 构建查询
-    query = db.query(SystemLog)
+    # 构建查询用于计算总数
+    count_query = db.query(SystemLog)
     
     # 添加筛选条件
     if log_level:
-        query = query.filter(SystemLog.log_level == log_level)
+        count_query = count_query.filter(SystemLog.log_level == log_level)
     if module:
-        query = query.filter(SystemLog.module == module)
+        count_query = count_query.filter(SystemLog.module == module)
     if action:
-        query = query.filter(SystemLog.action == action)
+        count_query = count_query.filter(SystemLog.action == action)
     if user_id is not None:
-        query = query.filter(SystemLog.user_id == user_id)
+        count_query = count_query.filter(SystemLog.user_id == user_id)
     if resource_type:
-        query = query.filter(SystemLog.resource_type == resource_type)
+        count_query = count_query.filter(SystemLog.resource_type == resource_type)
     if operation_result:
-        query = query.filter(SystemLog.operation_result == operation_result)
+        count_query = count_query.filter(SystemLog.operation_result == operation_result)
     if start_date:
-        query = query.filter(SystemLog.created_at >= start_date)
+        count_query = count_query.filter(SystemLog.created_at >= start_date)
     if end_date:
         # 结束日期包含当天的所有时间
         end_datetime = datetime.combine(end_date, datetime.max.time())
-        query = query.filter(SystemLog.created_at <= end_datetime)
+        count_query = count_query.filter(SystemLog.created_at <= end_datetime)
     if message_keyword:
-        query = query.filter(SystemLog.message.like(f"%{message_keyword}%"))
+        count_query = count_query.filter(SystemLog.message.like(f"%{message_keyword}%"))
     
-    # 获取总数和分页数据
-    total = query.count()
-    system_logs = query.order_by(SystemLog.created_at.desc()).offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(SystemLog)
+    
+    # 添加筛选条件
+    if log_level:
+        data_query = data_query.filter(SystemLog.log_level == log_level)
+    if module:
+        data_query = data_query.filter(SystemLog.module == module)
+    if action:
+        data_query = data_query.filter(SystemLog.action == action)
+    if user_id is not None:
+        data_query = data_query.filter(SystemLog.user_id == user_id)
+    if resource_type:
+        data_query = data_query.filter(SystemLog.resource_type == resource_type)
+    if operation_result:
+        data_query = data_query.filter(SystemLog.operation_result == operation_result)
+    if start_date:
+        data_query = data_query.filter(SystemLog.created_at >= start_date)
+    if end_date:
+        # 结束日期包含当天的所有时间
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        data_query = data_query.filter(SystemLog.created_at <= end_datetime)
+    if message_keyword:
+        data_query = data_query.filter(SystemLog.message.like(f"%{message_keyword}%"))
+    
+    # 获取分页数据
+    system_logs = data_query.order_by(SystemLog.created_at.desc()).offset(offset).limit(page_size).all()
     
     log.debug(f"查询到 {total} 条系统日志，当前页 {len(system_logs)} 条")
     
@@ -161,28 +188,39 @@ def get_log_statistics(
     """
     log.debug(f"获取日志统计: start_date={start_date}, end_date={end_date}")
     
-    # 构建基础查询
-    query = db.query(SystemLog)
-    
-    if start_date:
-        query = query.filter(SystemLog.created_at >= start_date)
+    # 计算结束日期时间
+    end_datetime = None
     if end_date:
         end_datetime = datetime.combine(end_date, datetime.max.time())
-        query = query.filter(SystemLog.created_at <= end_datetime)
     
     # 统计总数
-    total_logs = query.count()
+    total_query = db.query(SystemLog)
+    if start_date:
+        total_query = total_query.filter(SystemLog.created_at >= start_date)
+    if end_datetime:
+        total_query = total_query.filter(SystemLog.created_at <= end_datetime)
+    total_logs = total_query.count()
     
     # 按日志级别统计
     level_stats = {}
     for level in ['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL']:
-        count = query.filter(SystemLog.log_level == level).count()
+        level_query = db.query(SystemLog)
+        if start_date:
+            level_query = level_query.filter(SystemLog.created_at >= start_date)
+        if end_datetime:
+            level_query = level_query.filter(SystemLog.created_at <= end_datetime)
+        count = level_query.filter(SystemLog.log_level == level).count()
         level_stats[level] = count
     
     # 按操作结果统计
     result_stats = {}
     for result in ['success', 'failure', 'partial']:
-        count = query.filter(SystemLog.operation_result == result).count()
+        result_query = db.query(SystemLog)
+        if start_date:
+            result_query = result_query.filter(SystemLog.created_at >= start_date)
+        if end_datetime:
+            result_query = result_query.filter(SystemLog.created_at <= end_datetime)
+        count = result_query.filter(SystemLog.operation_result == result).count()
         result_stats[result] = count
     
     # 按模块统计（Top 10）

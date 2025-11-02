@@ -151,22 +151,37 @@ def list_permissions(
     
     offset = (page - 1) * page_size
     
-    # 构建查询，排除软删除的权限
-    query = db.query(Permission).filter(Permission.deleted_at.is_(None))
+    # 构建查询用于计算总数，排除软删除的权限
+    count_query = db.query(Permission).filter(Permission.deleted_at.is_(None))
     
     # 添加筛选条件
     if is_active is not None:
-        query = query.filter(Permission.is_active == is_active)
+        count_query = count_query.filter(Permission.is_active == is_active)
     if resource:
-        query = query.filter(Permission.resource == resource)
+        count_query = count_query.filter(Permission.resource == resource)
     if action:
-        query = query.filter(Permission.action == action)
+        count_query = count_query.filter(Permission.action == action)
     if permission_name:
-        query = query.filter(Permission.permission_name.like(f"%{permission_name}%"))
+        count_query = count_query.filter(Permission.permission_name.like(f"%{permission_name}%"))
     
-    # 获取总数和分页数据
-    total = query.count()
-    permissions = query.order_by(Permission.resource, Permission.action).offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(Permission).filter(Permission.deleted_at.is_(None))
+    
+    # 添加筛选条件
+    if is_active is not None:
+        data_query = data_query.filter(Permission.is_active == is_active)
+    if resource:
+        data_query = data_query.filter(Permission.resource == resource)
+    if action:
+        data_query = data_query.filter(Permission.action == action)
+    if permission_name:
+        data_query = data_query.filter(Permission.permission_name.like(f"%{permission_name}%"))
+    
+    # 获取分页数据
+    permissions = data_query.order_by(Permission.resource, Permission.action).offset(offset).limit(page_size).all()
     
     log.debug(f"查询到 {total} 个权限，当前页 {len(permissions)} 个")
     

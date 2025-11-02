@@ -221,37 +221,62 @@ async def get_fundus_images(
     - 是否主图
     """
     try:
-        # 构建查询
-        query = session.query(FundusImage)
+        # 构建基础查询 - 用于计算总数
+        count_query = session.query(FundusImage)
 
         # 应用筛选条件
         if not include_deleted:
-            query = query.filter(FundusImage.deleted_at.is_(None))
+            count_query = count_query.filter(FundusImage.deleted_at.is_(None))
 
         if examination_id:
-            query = query.filter(FundusImage.examination_id == examination_id)
+            count_query = count_query.filter(FundusImage.examination_id == examination_id)
 
         if eye_side:
-            query = query.filter(FundusImage.eye_side == eye_side)
+            count_query = count_query.filter(FundusImage.eye_side == eye_side)
 
         if capture_mode:
-            query = query.filter(FundusImage.capture_mode == capture_mode)
+            count_query = count_query.filter(FundusImage.capture_mode == capture_mode)
 
         if image_quality:
-            query = query.filter(FundusImage.image_quality == image_quality)
+            count_query = count_query.filter(FundusImage.image_quality == image_quality)
 
         if upload_status:
-            query = query.filter(FundusImage.upload_status == upload_status)
+            count_query = count_query.filter(FundusImage.upload_status == upload_status)
 
         if is_primary is not None:
-            query = query.filter(FundusImage.is_primary == is_primary)
+            count_query = count_query.filter(FundusImage.is_primary == is_primary)
 
         # 计算总数
-        total = query.count()
+        total = count_query.count()
+
+        # 重新构建查询用于分页数据获取
+        data_query = session.query(FundusImage)
+
+        # 应用相同的筛选条件
+        if not include_deleted:
+            data_query = data_query.filter(FundusImage.deleted_at.is_(None))
+
+        if examination_id:
+            data_query = data_query.filter(FundusImage.examination_id == examination_id)
+
+        if eye_side:
+            data_query = data_query.filter(FundusImage.eye_side == eye_side)
+
+        if capture_mode:
+            data_query = data_query.filter(FundusImage.capture_mode == capture_mode)
+
+        if image_quality:
+            data_query = data_query.filter(FundusImage.image_quality == image_quality)
+
+        if upload_status:
+            data_query = data_query.filter(FundusImage.upload_status == upload_status)
+
+        if is_primary is not None:
+            data_query = data_query.filter(FundusImage.is_primary == is_primary)
 
         # 分页
         offset = (page - 1) * page_size
-        images = query.order_by(FundusImage.created_at.desc())\
+        images = data_query.order_by(FundusImage.created_at.desc())\
             .offset(offset)\
             .limit(page_size)\
             .all()

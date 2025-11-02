@@ -177,20 +177,33 @@ def list_role_permissions(
     
     offset = (page - 1) * page_size
     
-    # 构建查询，排除软删除的关联
-    query = db.query(RolePermission).filter(RolePermission.deleted_at.is_(None))
+    # 构建查询用于计算总数，排除软删除的关联
+    count_query = db.query(RolePermission).filter(RolePermission.deleted_at.is_(None))
     
     # 添加筛选条件
     if role_id is not None:
-        query = query.filter(RolePermission.role_id == role_id)
+        count_query = count_query.filter(RolePermission.role_id == role_id)
     if permission_id is not None:
-        query = query.filter(RolePermission.permission_id == permission_id)
+        count_query = count_query.filter(RolePermission.permission_id == permission_id)
     if is_active is not None:
-        query = query.filter(RolePermission.is_active == is_active)
+        count_query = count_query.filter(RolePermission.is_active == is_active)
     
-    # 获取总数和分页数据
-    total = query.count()
-    role_permissions = query.order_by(RolePermission.granted_at.desc()).offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(RolePermission).filter(RolePermission.deleted_at.is_(None))
+    
+    # 添加筛选条件
+    if role_id is not None:
+        data_query = data_query.filter(RolePermission.role_id == role_id)
+    if permission_id is not None:
+        data_query = data_query.filter(RolePermission.permission_id == permission_id)
+    if is_active is not None:
+        data_query = data_query.filter(RolePermission.is_active == is_active)
+    
+    # 获取分页数据
+    role_permissions = data_query.order_by(RolePermission.granted_at.desc()).offset(offset).limit(page_size).all()
     
     log.debug(f"查询到 {total} 个角色权限关联，当前页 {len(role_permissions)} 个")
     

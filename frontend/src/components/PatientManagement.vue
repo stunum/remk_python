@@ -636,16 +636,17 @@ const viewPatientVisits = (record) => {
 // 开始新检查
 const startNewExamination = async (record) => {
   try {
+    console.log('record', record);
     // 获取患者store
     const patientStore = usePatientStore();
-    
+    console.log('patientStore', patientStore);
     // 显示加载状态
     message.loading('正在创建检查记录...', 0);
     
     // 创建检查记录
     const today = new Date();
     // 设置为当天的开始时间，格式为 YYYY-MM-DDTHH:MM:SSZ
-    const examinationDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const examinationDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(),today.getHours(),today.getMinutes(),today.getSeconds());
     const examinationData = {
       patient_id: record.id,
       examination_type_id: 1, // 默认检查类型ID为1

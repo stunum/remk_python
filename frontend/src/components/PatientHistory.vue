@@ -227,7 +227,7 @@
   </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue';
+import { ref, computed, onMounted, onUnmounted, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
 import { ArrowLeftOutlined, DeleteOutlined } from '@ant-design/icons-vue';
@@ -268,7 +268,7 @@ const selectRecord = async (item) => {
   // 拉取详情，包含图像、AI、诊断记录
   try {
     const res = await examinationAPI.getExamination(item.id);
-    if (res.success || (res.code && res.code >= 200 && res.code < 300)) {
+    if (res && res.code === 200) {
       // 更新详细数据
       selectedRecord.value = { ...res.data, loading: false } || { ...item, loading: false };
       
@@ -286,7 +286,7 @@ const selectRecord = async (item) => {
         console.log('⚠️ 该检查记录没有眼底图像数据');
       }
     } else {
-      message.error(res.message || '获取就诊记录详情失败');
+      message.error(res?.msg || '获取就诊记录详情失败');
       selectedRecord.value = { ...item, loading: false };
     }
   } catch (e) {
@@ -473,7 +473,7 @@ const getImageSrc = (thumbnailData) => {
 const fetchPatient = async () => {
   try {
     const res = await patientAPI.getPatient(patientId.value);
-    if (res.success || (res.code && res.code >= 200 && res.code < 300)) {
+    if (res && res.code === 200) {
       patient.value = res.data;
     }
   } catch (e) {
@@ -495,8 +495,8 @@ const confirmDeleteRecord = (record) => {
 const deleteRecord = async (recordId) => {
   try {
     const res = await examinationAPI.deleteExamination(recordId);
-    if (res.success || (res.code && res.code >= 200 && res.code < 300)) {
-      message.success('删除成功');
+    if (res && res.code === 200) {
+      message.success(res.msg || '删除成功');
       // 从列表中移除已删除的记录
       records.value = records.value.filter(r => r.id !== recordId);
       // 如果删除的是当前选中的记录，清空选中状态
@@ -504,7 +504,7 @@ const deleteRecord = async (recordId) => {
         selectedRecord.value = records.value[0] || null;
       }
     } else {
-      message.error(res.message || '删除失败');
+      message.error(res?.msg || '删除失败');
     }
   } catch (err) {
     console.error('删除检查记录失败:', err);
@@ -527,15 +527,13 @@ const fetchRecords = async (loadMore = false) => {
     const res = await examinationAPI.getExaminations({ 
       patientId: patientId.value, 
       pageSize: loadMore ? 10 : pageSize.value, // 初次加载15条，加载更多时每次10条
-      page: loadMore ? currentPage.value + 1 : 1, 
-      orderBy: 'created_at', // 按创建时间排序
-      order: 'desc', 
-      include: 'basic' // 只加载基本信息，减少SQL查询负担
+      page: loadMore ? currentPage.value + 1 : 1
     });
     
-    if (res.code && res.code >= 200 && res.code < 300) {
-      // 兼容分页结构 PaginationResponse { data, total, ... }
-      const arr = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+    if (res && res.code === 200) {
+      // 后端返回格式: { code: 200, msg: 'success', data: { items: [...], total, page, page_size, total_pages } }
+      const responseData = res.data;
+      const arr = Array.isArray(responseData?.items) ? responseData.items : [];
       
       if (loadMore) {
         // 加载更多时，追加数据
@@ -555,7 +553,7 @@ const fetchRecords = async (loadMore = false) => {
         selectedRecord.value = null;
       }
     } else {
-      message.error(res.message || '获取就诊记录失败');
+      message.error(res?.msg || '获取就诊记录失败');
     }
   } catch (err) {
     console.error('获取就诊记录失败:', err);
@@ -565,17 +563,20 @@ const fetchRecords = async (loadMore = false) => {
   }
 };
 
+// 保存清理函数的引用
+let scrollCleanup = null;
+
 onMounted(async () => {
   await fetchPatient();
   await fetchRecords();
   
   // 设置滚动监听
-  const cleanup = setupScrollListener();
+  scrollCleanup = setupScrollListener();
+});
   
   // 组件卸载时清理监听器
   onUnmounted(() => {
-    if (cleanup) cleanup();
-  });
+  if (scrollCleanup) scrollCleanup();
 });
 </script>
 

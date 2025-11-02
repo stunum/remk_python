@@ -267,52 +267,92 @@ async def get_registrations(
     - 日期范围
     """
     try:
-        # 构建查询
-        query = session.query(Registration)
+        # 构建基础查询 - 用于计算总数
+        count_query = session.query(Registration)
 
         # 应用筛选条件
         if not include_deleted:
-            query = query.filter(Registration.deleted_at.is_(None))
+            count_query = count_query.filter(Registration.deleted_at.is_(None))
 
         if patient_id:
-            query = query.filter(Registration.patient_id == patient_id)
+            count_query = count_query.filter(Registration.patient_id == patient_id)
 
         if doctor_id:
-            query = query.filter(Registration.doctor_id == doctor_id)
+            count_query = count_query.filter(Registration.doctor_id == doctor_id)
 
         if examination_type_id:
-            query = query.filter(
+            count_query = count_query.filter(
                 Registration.examination_type_id == examination_type_id)
 
         if status:
-            query = query.filter(Registration.status == status)
+            count_query = count_query.filter(Registration.status == status)
 
         if registration_type:
-            query = query.filter(
+            count_query = count_query.filter(
                 Registration.registration_type == registration_type)
 
         if payment_status:
-            query = query.filter(Registration.payment_status == payment_status)
+            count_query = count_query.filter(Registration.payment_status == payment_status)
 
         if priority:
-            query = query.filter(Registration.priority == priority)
+            count_query = count_query.filter(Registration.priority == priority)
 
         if registration_number:
-            query = query.filter(Registration.registration_number.ilike(
+            count_query = count_query.filter(Registration.registration_number.ilike(
                 f"%{registration_number}%"))
 
         if start_date:
-            query = query.filter(Registration.scheduled_date >= start_date)
+            count_query = count_query.filter(Registration.scheduled_date >= start_date)
 
         if end_date:
-            query = query.filter(Registration.scheduled_date <= end_date)
+            count_query = count_query.filter(Registration.scheduled_date <= end_date)
 
         # 计算总数
-        total = query.count()
+        total = count_query.count()
+
+        # 重新构建查询用于分页数据获取
+        data_query = session.query(Registration)
+
+        # 应用相同的筛选条件
+        if not include_deleted:
+            data_query = data_query.filter(Registration.deleted_at.is_(None))
+
+        if patient_id:
+            data_query = data_query.filter(Registration.patient_id == patient_id)
+
+        if doctor_id:
+            data_query = data_query.filter(Registration.doctor_id == doctor_id)
+
+        if examination_type_id:
+            data_query = data_query.filter(
+                Registration.examination_type_id == examination_type_id)
+
+        if status:
+            data_query = data_query.filter(Registration.status == status)
+
+        if registration_type:
+            data_query = data_query.filter(
+                Registration.registration_type == registration_type)
+
+        if payment_status:
+            data_query = data_query.filter(Registration.payment_status == payment_status)
+
+        if priority:
+            data_query = data_query.filter(Registration.priority == priority)
+
+        if registration_number:
+            data_query = data_query.filter(Registration.registration_number.ilike(
+                f"%{registration_number}%"))
+
+        if start_date:
+            data_query = data_query.filter(Registration.scheduled_date >= start_date)
+
+        if end_date:
+            data_query = data_query.filter(Registration.scheduled_date <= end_date)
 
         # 分页
         offset = (page - 1) * page_size
-        registrations = query.order_by(Registration.scheduled_date.desc(), Registration.id.desc())\
+        registrations = data_query.order_by(Registration.scheduled_date.desc(), Registration.id.desc())\
             .offset(offset)\
             .limit(page_size)\
             .all()

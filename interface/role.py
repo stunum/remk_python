@@ -147,20 +147,33 @@ def list_roles(
     
     offset = (page - 1) * page_size
     
-    # 构建查询，排除软删除的角色
-    query = db.query(Role).filter(Role.deleted_at.is_(None))
+    # 构建查询用于计算总数，排除软删除的角色
+    count_query = db.query(Role).filter(Role.deleted_at.is_(None))
     
     # 添加筛选条件
     if is_active is not None:
-        query = query.filter(Role.is_active == is_active)
+        count_query = count_query.filter(Role.is_active == is_active)
     if is_system_role is not None:
-        query = query.filter(Role.is_system_role == is_system_role)
+        count_query = count_query.filter(Role.is_system_role == is_system_role)
     if role_name:
-        query = query.filter(Role.role_name.like(f"%{role_name}%"))
+        count_query = count_query.filter(Role.role_name.like(f"%{role_name}%"))
     
-    # 获取总数和分页数据
-    total = query.count()
-    roles = query.order_by(Role.created_at.desc()).offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(Role).filter(Role.deleted_at.is_(None))
+    
+    # 添加筛选条件
+    if is_active is not None:
+        data_query = data_query.filter(Role.is_active == is_active)
+    if is_system_role is not None:
+        data_query = data_query.filter(Role.is_system_role == is_system_role)
+    if role_name:
+        data_query = data_query.filter(Role.role_name.like(f"%{role_name}%"))
+    
+    # 获取分页数据
+    roles = data_query.order_by(Role.created_at.desc()).offset(offset).limit(page_size).all()
     
     log.debug(f"查询到 {total} 个角色，当前页 {len(roles)} 个")
     

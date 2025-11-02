@@ -120,20 +120,33 @@ def list_users(
     """获取用户列表（分页，排除已软删除的用户）"""
     offset = (page - 1) * page_size
     
-    # 构建查询，排除软删除的用户
-    query = db.query(User).filter(User.deleted_at.is_(None))
+    # 构建查询用于计算总数，排除软删除的用户
+    count_query = db.query(User).filter(User.deleted_at.is_(None))
     
     # 添加筛选条件
     if status:
-        query = query.filter(User.status == status)
+        count_query = count_query.filter(User.status == status)
     if user_type:
-        query = query.filter(User.user_type == user_type)
+        count_query = count_query.filter(User.user_type == user_type)
     if department:
-        query = query.filter(User.department == department)
+        count_query = count_query.filter(User.department == department)
     
-    # 获取总数和分页数据
-    total = query.count()
-    users = query.offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(User).filter(User.deleted_at.is_(None))
+    
+    # 添加筛选条件
+    if status:
+        data_query = data_query.filter(User.status == status)
+    if user_type:
+        data_query = data_query.filter(User.user_type == user_type)
+    if department:
+        data_query = data_query.filter(User.department == department)
+    
+    # 获取分页数据
+    users = data_query.offset(offset).limit(page_size).all()
     
     # 转换为响应模型列表，排除敏感字段
     users_response = [UserResponse.model_validate(user).model_dump() for user in users]

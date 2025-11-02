@@ -171,20 +171,33 @@ def list_user_roles(
     
     offset = (page - 1) * page_size
     
-    # 构建查询，排除软删除的关联
-    query = db.query(UserRole).filter(UserRole.deleted_at.is_(None))
+    # 构建查询用于计算总数，排除软删除的关联
+    count_query = db.query(UserRole).filter(UserRole.deleted_at.is_(None))
     
     # 添加筛选条件
     if user_id is not None:
-        query = query.filter(UserRole.user_id == user_id)
+        count_query = count_query.filter(UserRole.user_id == user_id)
     if role_id is not None:
-        query = query.filter(UserRole.role_id == role_id)
+        count_query = count_query.filter(UserRole.role_id == role_id)
     if is_active is not None:
-        query = query.filter(UserRole.is_active == is_active)
+        count_query = count_query.filter(UserRole.is_active == is_active)
     
-    # 获取总数和分页数据
-    total = query.count()
-    user_roles = query.order_by(UserRole.assigned_at.desc()).offset(offset).limit(page_size).all()
+    # 获取总数
+    total = count_query.count()
+    
+    # 重新构建查询用于获取分页数据
+    data_query = db.query(UserRole).filter(UserRole.deleted_at.is_(None))
+    
+    # 添加筛选条件
+    if user_id is not None:
+        data_query = data_query.filter(UserRole.user_id == user_id)
+    if role_id is not None:
+        data_query = data_query.filter(UserRole.role_id == role_id)
+    if is_active is not None:
+        data_query = data_query.filter(UserRole.is_active == is_active)
+    
+    # 获取分页数据
+    user_roles = data_query.order_by(UserRole.assigned_at.desc()).offset(offset).limit(page_size).all()
     
     log.debug(f"查询到 {total} 个用户角色关联，当前页 {len(user_roles)} 个")
     
