@@ -1,11 +1,11 @@
 /**
  * 硬件控制相关API
- * 通过后端 API 代理调用独立硬件服务（端口 25512）
- * 避免 CORS 跨域问题
+ * 直接访问独立硬件服务（端口 25512）
+ * Electron 环境不存在 CORS 跨域问题
  */
 
-// 硬件API统一使用后端服务地址
-const HARDWARE_API_BASE = 'http://localhost:8080';
+// 硬件服务地址
+const HARDWARE_API_BASE = 'http://localhost:25512/api';
 
 
 
@@ -14,8 +14,8 @@ const HARDWARE_API_BASE = 'http://localhost:8080';
  * @returns {Promise} 响应数据
  */
 export function startDevice() {
-  console.log('🔧 调用代理API: 启动设备');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/start`;
+  console.log('🔧 调用硬件服务API: 启动设备');
+  const url = `${HARDWARE_API_BASE}/hardware/start`;
   
   return fetch(url, {
     method: 'POST',
@@ -44,8 +44,8 @@ export function startDevice() {
  * @returns {Promise} 响应数据
  */
 export function stopDevice() {
-  console.log('🔧 调用代理API: 停止设备');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/stop`;
+  console.log('🔧 调用硬件服务API: 停止设备');
+  const url = `${HARDWARE_API_BASE}/hardware/stop`;
   
   return fetch(url, {
     method: 'POST',
@@ -74,8 +74,8 @@ export function stopDevice() {
  * @returns {Promise} 响应数据
  */
 export function resetDevice() {
-  console.log('🔧 调用代理API: 复位设备');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/reset`;
+  console.log('🔧 调用硬件服务API: 复位设备');
+  const url = `${HARDWARE_API_BASE}/hardware/reset`;
   
   return fetch(url, {
     method: 'POST',
@@ -104,8 +104,8 @@ export function resetDevice() {
  * @returns {Promise} 响应数据
  */
 export function getDeviceStatus() {
-  console.log('🔧 调用代理API: 获取设备状态');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/status`;
+  console.log('🔧 调用硬件服务API: 获取设备状态');
+  const url = `${HARDWARE_API_BASE}/hardware/status`;
   
   return fetch(url, {
     method: 'GET',
@@ -134,8 +134,8 @@ export function getDeviceStatus() {
  * @returns {Promise} 响应数据
  */
 export function getDeviceInfo() {
-  console.log('🔧 调用代理API: 获取设备信息');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/info`;
+  console.log('🔧 调用硬件服务API: 获取设备信息');
+  const url = `${HARDWARE_API_BASE}/hardware/info`;
   
   return fetch(url, {
     method: 'GET',
@@ -166,10 +166,8 @@ export function getDeviceInfo() {
  * @returns {Promise} 响应数据
  */
 export function setCameraGain(analog, digital) {
-  console.log('🔧 调用代理API: 设置相机增益', { analog, digital });
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/camera/gain`;
-  
-  // 通过代理API调用
+  console.log('🔧 调用硬件服务API: 设置相机增益', { analog, digital });
+  const url = `${HARDWARE_API_BASE}/hardware/camera/gain`;
   return fetch(url, {
     method: 'POST',
     headers: {
@@ -201,10 +199,8 @@ export function setCameraGain(analog, digital) {
  * @returns {Promise} 响应数据
  */
 export function restartCamera() {
-  console.log('🔧 调用代理API: 重启相机');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/camera/restart`;
-  
-  // 通过代理API调用
+  console.log('🔧 调用硬件服务API: 重启相机');
+  const url = `${HARDWARE_API_BASE}/hardware/camera/restart`;
   return fetch(url, {
     method: 'POST',
     headers: {
@@ -233,10 +229,8 @@ export function restartCamera() {
  * @returns {Promise} 响应数据
  */
 export function setWallpaperPosition(pos) {
-  console.log('🔧 调用代理API: 设置壁纸位置', { pos });
-  const url = `${HARDWARE_API_BASE}/api/proxy/wallpaper`;
-  
-  // 通过代理API调用
+  console.log('🔧 调用硬件服务API: 设置壁纸位置', { pos });
+  const url = `${HARDWARE_API_BASE}/wallpaper`;
   return fetch(url, {
     method: 'POST',
     headers: {
@@ -270,8 +264,8 @@ export function setWallpaperPosition(pos) {
  * @returns {Promise} 响应数据
  */
 export function captureImage(mode, folderpath, options = {}) {
-  console.log('🔧 调用代理API: 拍照', { mode, folderpath });
-  const url = `${HARDWARE_API_BASE}/api/proxy/capture`;
+  console.log('🔧 调用硬件服务API: 拍照', { mode, folderpath });
+  const url = `${HARDWARE_API_BASE}/capture`;
   const { showLoading = true } = options;
   
   const requestBody = {
@@ -311,8 +305,8 @@ export function captureImage(mode, folderpath, options = {}) {
  * @returns {Promise} 响应数据，包含眼睛状态信息 "OD"(右眼) 或 "OS"(左眼)
  */
 export function getEyeSideStatus() {
-  console.log('🔧 调用代理API: 获取眼睛左右状态');
-  const url = `${HARDWARE_API_BASE}/api/proxy/hardware/status/osd`;
+  console.log('🔧 调用硬件服务API: 获取眼睛左右状态');
+  const url = `${HARDWARE_API_BASE}/hardware/status/osd`;
   
   return fetch(url, {
     method: 'GET',
