@@ -1,8 +1,0 @@
-/* 导入全局SCSS样式 */
-@import './styles/global.scss';
-
-#app {
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-}
