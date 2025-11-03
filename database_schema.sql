@@ -3,22 +3,6 @@
 
 BEGIN;
 
--- 清理旧对象(按依赖顺序)
-DROP TABLE IF EXISTS system_logs CASCADE;
-DROP TABLE IF EXISTS role_permissions CASCADE;
-DROP TABLE IF EXISTS user_roles CASCADE;
-DROP TABLE IF EXISTS permissions CASCADE;
-DROP TABLE IF EXISTS roles CASCADE;
-DROP TABLE IF EXISTS follow_ups CASCADE;
-DROP TABLE IF EXISTS diagnosis_records CASCADE;
-DROP TABLE IF EXISTS ai_diagnoses CASCADE;
-DROP TABLE IF EXISTS fundus_images CASCADE;
-DROP TABLE IF EXISTS examinations CASCADE;
-DROP TABLE IF EXISTS registrations CASCADE;
-DROP TABLE IF EXISTS examination_types CASCADE;
-DROP TABLE IF EXISTS patients CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-
 -- 1. 用户/医生信息管理表
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,                                     -- 用户ID
