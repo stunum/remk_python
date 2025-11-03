@@ -204,8 +204,8 @@ CREATE TABLE registrations (
     referral_hospital VARCHAR(200),                            -- 转诊医院
     notes TEXT,                                                -- 备注
     check_in_time TIMESTAMPTZ,                                 -- 签到时间
-    queue_number INTEGER CHECK (queue_number >= 0),                                      -- 排队号码(当天/当科室内序号)
-    estimated_wait_time INTEGER CHECK (estimated_wait_time >= 0),                               -- 预计等待时间(分钟)
+    queue_number INTEGER CHECK (queue_number >= 0),            -- 排队号码(当天/当科室内序号)
+    estimated_wait_time INTEGER CHECK (estimated_wait_time >= 0),  -- 预计等待时间(分钟)
     deleted_at TIMESTAMPTZ,                                    -- 软删除时间戳(带时区)
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,          -- 创建时间(带时区)
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,          -- 更新时间(带时区)
@@ -509,7 +509,7 @@ CREATE TABLE user_roles (
     assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,           -- 分配时间(带时区)
     assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,   -- 分配人
     is_active BOOLEAN DEFAULT true,                            -- 是否有效
-    deleted_at TIMESTAMPTZ,                                      -- 软删除时间戳(带时区)
+    deleted_at TIMESTAMPTZ                                      -- 软删除时间戳(带时区) - 修复: 移除多余逗号
 );
 COMMENT ON TABLE user_roles IS '用户角色关联表:管理用户与角色的关系';
 COMMENT ON COLUMN user_roles.id IS '关联ID';
