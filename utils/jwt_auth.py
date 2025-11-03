@@ -229,6 +229,23 @@ def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depends(se
     }
 
 
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+    """
+    从JWT令牌中获取当前用户信息（用于依赖注入）
+    这是get_current_user_info的别名，用于简化接口定义
+    
+    Args:
+        credentials: HTTP Bearer凭证
+        
+    Returns:
+        Dict[str, Any]: 用户信息
+        
+    Raises:
+        HTTPException: 令牌无效
+    """
+    return get_current_user_info(credentials)
+
+
 def create_token_pair(user_id: int, username: str, user_type: str, permissions: list = None) -> Dict[str, Any]:
     """
     创建访问令牌和刷新令牌对

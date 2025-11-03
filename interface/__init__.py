@@ -19,6 +19,7 @@ from .permission import router as permission_router
 from .user_role import router as user_role_router
 from .role_permission import router as role_permission_router
 from .system_log import router as system_log_router
+from .config_management import router as config_management_router
 
 # 注册所有子路由器
 api_router.include_router(auth_router, prefix="/auth", tags=["认证管理"])
@@ -33,3 +34,4 @@ api_router.include_router(permission_router, prefix="/permissions", tags=["权�
 api_router.include_router(user_role_router, prefix="/user-roles", tags=["用户角色关联"])
 api_router.include_router(role_permission_router, prefix="/role-permissions", tags=["角色权限关联"])
 api_router.include_router(system_log_router, prefix="/system-logs", tags=["系统日志"])
+api_router.include_router(config_management_router, prefix="/config", tags=["配置管理"])
