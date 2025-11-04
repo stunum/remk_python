@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field as PydanticField
 
@@ -22,14 +22,9 @@ from loguru_logging import log
 
 # 导入 AI 处理函数，但允许导入失败
 try:
-    from ai.ai_process import process_colorization, is_ai_available, get_ai_error
-    AI_AVAILABLE = True
+    from ai.ai_process import process_colorization
 except ImportError as e:
     log.warning(f"AI 模块导入失败: {e}")
-    AI_AVAILABLE = False
-    process_colorization = None
-    is_ai_available = lambda: False
-    get_ai_error = lambda: "AI 模块未安装或导入失败"
 
 router = APIRouter()
 
@@ -376,7 +371,7 @@ async def save_multi_image_to_local(
         log.info(f"识别的通道: IR={ir_img}, Green={green_img}, Red={red_img}, Blue={blue_img}")
         
         # 调用AI合成彩色图像
-        if ir_img and green_img and red_img and blue_img:
+        if ir_img and green_img:
             log.info("开始调用AI合成彩色图像...")
             
             # 生成彩色图像文件名和路径
@@ -385,12 +380,6 @@ async def save_multi_image_to_local(
             
             # 调用本地AI合成模块
             try:
-                # 首先检查 AI 模块是否可用
-                if not AI_AVAILABLE or not is_ai_available():
-                    error_detail = get_ai_error() if get_ai_error else "AI 模块不可用"
-                    log.warning(f"AI 模块不可用，跳过彩色图像合成: {error_detail}")
-                    raise RuntimeError(f"AI 模块不可用: {error_detail}")
-                
                 log.info(f"开始AI合成彩色图像: ir={ir_img}, green={green_img}, save={color_img_path}")
                 
                 # 调用本地AI处理函数（只需要IR和Green通道）

@@ -18,19 +18,6 @@ async def lifespan(app: FastAPI):
     # 启动事件
     log.info("服务器启动中...")
     
-    # 检查 AI 模块状态
-    try:
-        from ai.ai_process import is_ai_available, get_ai_error
-        if is_ai_available():
-            log.info("✓ AI 模块已加载，彩色图像合成功能可用")
-        else:
-            error_msg = get_ai_error()
-            log.warning("✗ AI 模块不可用，彩色图像合成功能将不可用")
-            log.warning(f"原因: {error_msg}")
-    except Exception as e:
-        log.warning(f"✗ AI 模块检查失败: {e}")
-        log.warning("彩色图像合成功能将不可用，但其他功能正常")
-    
     # 可以在这里添加其他启动时需要执行的操作
     yield
     # 关闭事件
@@ -82,20 +69,8 @@ def create_app() -> FastAPI:
     async def health_check():
         log.debug("健康检查请求")
         
-        # 检查 AI 模块状态
-        ai_status = {"available": False, "message": "未检查"}
-        try:
-            from ai.ai_process import is_ai_available, get_ai_error
-            if is_ai_available():
-                ai_status = {"available": True, "message": "AI 模块正常"}
-            else:
-                ai_status = {"available": False, "message": get_ai_error() or "加载失败"}
-        except Exception as e:
-            ai_status = {"available": False, "message": f"检查失败: {str(e)}"}
-        
         return {
-            "status": "ok",
-            "ai_module": ai_status
+            "status": "ok"
         }
     
     return app
