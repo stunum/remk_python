@@ -2,12 +2,15 @@
 AI 图像处理模块
 提供眼底图像的彩色化处理功能
 """
+from loguru_logging import log
 import os
 try:
     import cv2
     import numpy as np
     from ai import rgb_image_generate
+    log.info("AI 模块加载成功")
 except ImportError as e:
+    log.error(f"缺少必需的依赖: {e}")
     raise RuntimeError(f"缺少必需的依赖: {e}")
 # 强制添加当前目录到 Python 路径
 current_dir = os.path.dirname(os.path.abspath(__file__))

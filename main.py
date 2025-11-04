@@ -96,7 +96,7 @@ def main():
             "main:app",  # 使用字符串引用，避免重复创建app实例
             host=server_config.host,
             port=server_config.port,
-            log_level="info",
+            log_level="debug",
             reload=True  # 开发模式下启用热重载
         )
     except Exception as e:
