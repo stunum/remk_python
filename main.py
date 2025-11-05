@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
+import scipy.signal
 from config import config
 from database import db
 from interface import api_router
@@ -93,11 +93,11 @@ def main():
         # 启动服务器
         log.info(f"启动服务器: http://{server_config.host}:{server_config.port}")
         uvicorn.run(
-            "main:app",  # 使用字符串引用，避免重复创建app实例
+            app,  # 使用字符串引用，避免重复创建app实例
             host=server_config.host,
             port=server_config.port,
             log_level="debug",
-            reload=True  # 开发模式下启用热重载
+            reload=False  # 开发模式下启用热重载
         )
     except Exception as e:
         log.exception(f"服务器启动失败: {str(e)}")
@@ -105,4 +105,6 @@ def main():
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
     main()

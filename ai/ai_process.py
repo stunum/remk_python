@@ -3,6 +3,7 @@ AI 图像处理模块
 提供眼底图像的彩色化处理功能
 """
 from loguru_logging import log
+from utils.path import resource_path
 import os
 try:
     import cv2
@@ -12,10 +13,8 @@ try:
 except ImportError as e:
     log.error(f"缺少必需的依赖: {e}")
     raise RuntimeError(f"缺少必需的依赖: {e}")
-# 强制添加当前目录到 Python 路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# 初始化模型
-model_path = os.path.join(current_dir, "model.onnx")
+
+model_path= resource_path("ai/model.onnx")
 colorizer = rgb_image_generate.ColorizationModel(model_path)
 
 

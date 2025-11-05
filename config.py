@@ -6,7 +6,6 @@ import yaml
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field, asdict
 
-
 # 定义与config.yaml对应的结构模型类
 @dataclass
 class DatabaseConfig:
@@ -103,9 +102,9 @@ class Config:
         """
         try:
             # 获取当前文件所在目录的绝对路径
-            base_dir = os.path.dirname(os.path.abspath(__file__))
+            # base_dir = os.path.dirname(os.path.abspath(__file__))
             # 构建配置文件的绝对路径
-            config_path = os.path.join(base_dir, self._config_file_path)
+            config_path =  os.path.join(os.getcwd(),self._config_file_path)
             
             # 检查文件是否存在
             if not os.path.exists(config_path):
@@ -201,10 +200,10 @@ class Config:
             
         try:
             # 获取当前文件所在目录的绝对路径
-            base_dir = os.path.dirname(os.path.abspath(__file__))
+            # base_dir = os.path.dirname(os.path.abspath(__file__))
             # 构建配置文件的绝对路径
-            config_path = os.path.join(base_dir, self._config_file_path)
-            
+            # config_path = os.path.join(base_dir, self._config_file_path)
+            config_path =  os.path.join(os.getcwd(),self._config_file_path)
             # 将结构化配置转换为字典
             config_dict = self._config_to_dict()
             
