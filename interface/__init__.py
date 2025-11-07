@@ -21,6 +21,7 @@ from .role_permission import router as role_permission_router
 from .system_log import router as system_log_router
 from .config_management import router as config_management_router
 from .ai_diagnosis import router as ai_diagnosis_router
+from .diagnosis_record import router as diagnosis_record_router
 
 # 注册所有子路由器
 api_router.include_router(auth_router, prefix="/auth", tags=["认证管理"])
@@ -37,3 +38,4 @@ api_router.include_router(role_permission_router, prefix="/role-permissions", ta
 api_router.include_router(system_log_router, prefix="/system-logs", tags=["系统日志"])
 api_router.include_router(config_management_router, prefix="/config", tags=["配置管理"])
 api_router.include_router(ai_diagnosis_router, prefix="/ai-diagnoses", tags=["AI诊断管理"])
+api_router.include_router(diagnosis_record_router, prefix="/diagnosis-records", tags=["诊断记录管理"])
