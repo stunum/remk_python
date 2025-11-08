@@ -107,4 +107,6 @@ def main():
 if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
+    from init_database import init_database_data
+    init_database_data()
     main()

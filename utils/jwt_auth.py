@@ -9,15 +9,15 @@ from jose import JWTError, jwt
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from loguru_logging import log
+from config import config as app_config
 
-# 密码加密盐值（生产环境应该从环境变量读取）
-PASSWORD_SALT = "eyes_remk_system_salt_change_in_production"
-
-# JWT配置
-SECRET_KEY = "your-secret-key-change-this-in-production-to-a-secure-random-string"  # 生产环境应该从环境变量读取
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24小时
-REFRESH_TOKEN_EXPIRE_DAYS = 7  # 7天
+# 从配置文件加载JWT相关参数
+_jwt_config = app_config.config.jwt
+PASSWORD_SALT = _jwt_config.password_salt
+SECRET_KEY = _jwt_config.secret_key
+ALGORITHM = _jwt_config.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = _jwt_config.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = _jwt_config.refresh_token_expire_days
 
 # HTTP Bearer安全方案
 security = HTTPBearer()

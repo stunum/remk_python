@@ -6,8 +6,14 @@
 import hashlib
 import sys
 
-# 密码盐值（必须与 utils/jwt_auth.py 中的 PASSWORD_SALT 一致）
-PASSWORD_SALT = "eyes_remk_system_salt_change_in_production"
+# 密码盐值（优先从配置文件读取，确保与 utils/jwt_auth.py 中保持一致）
+try:
+    from config import config as app_config
+
+    PASSWORD_SALT = app_config.config.jwt.password_salt
+except Exception:
+    # 配置加载失败时回退到默认盐值，并给出提示
+    PASSWORD_SALT = "eyes_remk_system_salt_change_in_production"
 
 
 def calculate_frontend_hash(password: str) -> str:

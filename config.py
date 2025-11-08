@@ -43,7 +43,11 @@ class ThirdPartyConfig:
 class JWTConfig:
     """JWT配置"""
     secret_key: str
+    password_salt: str
     token_expire_hours: int
+    algorithm: str
+    access_token_expire_minutes: int
+    refresh_token_expire_days: int
 
 
 @dataclass
@@ -164,7 +168,12 @@ class Config:
                 ),
                 jwt=JWTConfig(
                     secret_key=config_data['jwt']['secret_key'],
-                    token_expire_hours=config_data['jwt']['token_expire_hours']
+                    password_salt=config_data['jwt']['password_salt'],
+                    token_expire_hours=config_data['jwt']['token_expire_hours'],
+                    algorithm=config_data['jwt']['algorithm'],
+                    access_token_expire_minutes=config_data['jwt']['access_token_expire_minutes'],
+                    refresh_token_expire_days=config_data['jwt']['refresh_token_expire_days']
+                    
                 ),
                 logging=LoggingConfig(
                     level=config_data['logging']['level'],
