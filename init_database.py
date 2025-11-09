@@ -16,7 +16,10 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import ProgrammingError
 from sqlmodel import Session, SQLModel, select
+from config import config as app_config
 
+# 从配置文件加载JWT相关参数
+_jwt_config = app_config.config.database
 from models import (
     ExaminationType,
     Permission,
@@ -29,12 +32,13 @@ from utils.jwt_auth import PASSWORD_SALT, hash_password as backend_hash_password
 
 
 POSTGRES_CONFIG: Dict[str, str] = {
-    "host": "127.0.0.1",
-    "port": "5432",
-    "user": "postgres",
-    "password": "1234",
+    "host": _jwt_config.host,
+    "port": _jwt_config.port,
+    "user": _jwt_config.user,
+    "password": _jwt_config.password,
 }
-TARGET_DB = "eyes_db"
+
+TARGET_DB = _jwt_config.dbname
 DEFAULT_DB = "postgres"
 
 

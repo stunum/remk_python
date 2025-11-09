@@ -33,7 +33,7 @@ jwt:
   password_salt: "eyes_remk_system_salt_change_in_production"
   token_expire_hours: 24
   algorithm: "HS256"
-  access_token_expire_minutes: 60 * 24
+  access_token_expire_minutes: 1440
   refresh_token_expire_days: 7
   
 # 日志配置
