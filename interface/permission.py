@@ -11,6 +11,7 @@ from models.permission import Permission
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -58,7 +59,7 @@ class PermissionDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建新权限")
+@router.post("/", response_model=ResponseModel, summary="创建新权限", dependencies=[Depends(get_current_user_info), Depends(require_permission('PERMISSION_MANAGE'))])
 def create_permission(permission_data: PermissionCreate, db: Session = Depends(get_db)):
     """
     创建新权限
@@ -102,7 +103,7 @@ def create_permission(permission_data: PermissionCreate, db: Session = Depends(g
     return success_response(data=permission_response.model_dump())
 
 
-@router.get("/{permission_id}", response_model=ResponseModel, summary="根据ID获取单个权限")
+@router.get("/{permission_id}", response_model=ResponseModel, summary="根据ID获取单个权限", dependencies=[Depends(get_current_user_info), Depends(require_permission('PERMISSION_MANAGE'))])
 def get_permission(permission_id: int, db: Session = Depends(get_db)):
     """
     根据ID获取单个权限信息（排除已软删除的权限）
@@ -126,7 +127,7 @@ def get_permission(permission_id: int, db: Session = Depends(get_db)):
     return success_response(data=permission_response.model_dump())
 
 
-@router.get("/", response_model=ResponseModel, summary="查询权限列表")
+@router.get("/", response_model=ResponseModel, summary="查询权限列表", dependencies=[Depends(get_current_user_info), Depends(require_permission('PERMISSION_MANAGE'))])
 def list_permissions(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -199,7 +200,7 @@ def list_permissions(
     })
 
 
-@router.put("/{permission_id}", response_model=ResponseModel, summary="更新权限信息")
+@router.put("/{permission_id}", response_model=ResponseModel, summary="更新权限信息", dependencies=[Depends(get_current_user_info), Depends(require_permission('PERMISSION_MANAGE'))])
 def update_permission(permission_id: int, permission_data: PermissionUpdate, db: Session = Depends(get_db)):
     """
     更新权限信息（排除已软删除的权限）
@@ -249,7 +250,7 @@ def update_permission(permission_id: int, permission_data: PermissionUpdate, db:
     return success_response(data=permission_response.model_dump())
 
 
-@router.delete("/{permission_id}", response_model=ResponseModel, summary="删除单个权限（软删除）")
+@router.delete("/{permission_id}", response_model=ResponseModel, summary="删除单个权限（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('PERMISSION_MANAGE'))])
 def delete_permission(permission_id: int, db: Session = Depends(get_db)):
     """
     删除单个权限（软删除）
@@ -276,7 +277,7 @@ def delete_permission(permission_id: int, db: Session = Depends(get_db)):
     return success_response(data={"deleted_id": permission_id})
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除权限（软删除）")
+@router.delete("/", response_model=ResponseModel, summary="批量删除权限（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('PERMISSION_MANAGE'))])
 def delete_permissions(delete_request: PermissionDeleteRequest, db: Session = Depends(get_db)):
     """
     批量软删除权限
@@ -311,4 +312,3 @@ def delete_permissions(delete_request: PermissionDeleteRequest, db: Session = De
         "deleted_count": deleted_count,
         "deleted_ids": deleted_ids
     })
-

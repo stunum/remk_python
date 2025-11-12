@@ -13,6 +13,7 @@ from models.role import Role
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -65,7 +66,7 @@ class UserRoleDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建用户角色关联")
+@router.post("/", response_model=ResponseModel, summary="创建用户角色关联", dependencies=[Depends(get_current_user_info), Depends(require_permission('USER_ROLE_ASSIGN'))])
 def create_user_role(user_role_data: UserRoleCreate, db: Session = Depends(get_db)):
     """
     创建用户角色关联
@@ -111,7 +112,7 @@ def create_user_role(user_role_data: UserRoleCreate, db: Session = Depends(get_d
     return success_response(data=user_role_response.model_dump())
 
 
-@router.get("/{user_role_id}", response_model=ResponseModel, summary="根据ID获取用户角色关联")
+@router.get("/{user_role_id}", response_model=ResponseModel, summary="根据ID获取用户角色关联", dependencies=[Depends(get_current_user_info), Depends(require_permission('USER_ROLE_ASSIGN'))])
 def get_user_role(user_role_id: int, db: Session = Depends(get_db)):
     """
     根据ID获取用户角色关联信息（排除已软删除的关联）
@@ -148,7 +149,7 @@ def get_user_role(user_role_id: int, db: Session = Depends(get_db)):
     return success_response(data=detail_response.model_dump())
 
 
-@router.get("/", response_model=ResponseModel, summary="查询用户角色关联列表")
+@router.get("/", response_model=ResponseModel, summary="查询用户角色关联列表", dependencies=[Depends(get_current_user_info), Depends(require_permission('USER_ROLE_ASSIGN'))])
 def list_user_roles(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -231,7 +232,7 @@ def list_user_roles(
     })
 
 
-@router.put("/{user_role_id}", response_model=ResponseModel, summary="更新用户角色关联")
+@router.put("/{user_role_id}", response_model=ResponseModel, summary="更新用户角色关联", dependencies=[Depends(get_current_user_info), Depends(require_permission('USER_ROLE_ASSIGN'))])
 def update_user_role(user_role_id: int, user_role_data: UserRoleUpdate, db: Session = Depends(get_db)):
     """
     更新用户角色关联（排除已软删除的关联）
@@ -269,7 +270,7 @@ def update_user_role(user_role_id: int, user_role_data: UserRoleUpdate, db: Sess
     return success_response(data=user_role_response.model_dump())
 
 
-@router.delete("/{user_role_id}", response_model=ResponseModel, summary="删除用户角色关联（软删除）")
+@router.delete("/{user_role_id}", response_model=ResponseModel, summary="删除用户角色关联（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('USER_ROLE_ASSIGN'))])
 def delete_user_role(user_role_id: int, db: Session = Depends(get_db)):
     """
     删除用户角色关联（软删除）
@@ -296,7 +297,7 @@ def delete_user_role(user_role_id: int, db: Session = Depends(get_db)):
     return success_response(data={"deleted_id": user_role_id})
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除用户角色关联（软删除）")
+@router.delete("/", response_model=ResponseModel, summary="批量删除用户角色关联（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('USER_ROLE_ASSIGN'))])
 def delete_user_roles(delete_request: UserRoleDeleteRequest, db: Session = Depends(get_db)):
     """
     批量软删除用户角色关联
@@ -331,4 +332,3 @@ def delete_user_roles(delete_request: UserRoleDeleteRequest, db: Session = Depen
         "deleted_count": deleted_count,
         "deleted_ids": deleted_ids
     })
-

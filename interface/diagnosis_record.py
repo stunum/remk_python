@@ -18,6 +18,7 @@ from models.user import User
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -141,7 +142,7 @@ class DiagnosisRecordDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建诊断记录")
+@router.post("/", response_model=ResponseModel, summary="创建诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_CREATE'))])
 async def create_diagnosis_record(
     diagnosis_record: DiagnosisRecordCreate,
     session: Session = Depends(get_db)
@@ -197,7 +198,7 @@ async def create_diagnosis_record(
         return error_response(msg=f"创建诊断记录失败: {str(e)}", code=500)
 
 
-@router.get("/", response_model=ResponseModel, summary="分页查询诊断记录")
+@router.get("/", response_model=ResponseModel, summary="分页查询诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_VIEW'))])
 async def get_diagnosis_records(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -356,7 +357,7 @@ async def get_diagnosis_records(
         return error_response(msg=f"查询诊断记录列表失败: {str(e)}", code=500)
 
 
-@router.get("/{diagnosis_record_id}", response_model=ResponseModel, summary="查询单个诊断记录")
+@router.get("/{diagnosis_record_id}", response_model=ResponseModel, summary="查询单个诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_VIEW'))])
 async def get_diagnosis_record(
     diagnosis_record_id: int,
     session: Session = Depends(get_db)
@@ -401,7 +402,7 @@ async def get_diagnosis_record(
         return error_response(msg=f"查询诊断记录失败: {str(e)}", code=500)
 
 
-@router.put("/{diagnosis_record_id}", response_model=ResponseModel, summary="更新诊断记录")
+@router.put("/{diagnosis_record_id}", response_model=ResponseModel, summary="更新诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_EDIT'))])
 async def update_diagnosis_record(
     diagnosis_record_id: int,
     diagnosis_record_update: DiagnosisRecordUpdate,
@@ -464,7 +465,7 @@ async def update_diagnosis_record(
         return error_response(msg=f"更新诊断记录失败: {str(e)}", code=500)
 
 
-@router.delete("/{diagnosis_record_id}", response_model=ResponseModel, summary="删除单个诊断记录")
+@router.delete("/{diagnosis_record_id}", response_model=ResponseModel, summary="删除单个诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_DELETE'))])
 async def delete_diagnosis_record(
     diagnosis_record_id: int,
     session: Session = Depends(get_db)
@@ -498,7 +499,7 @@ async def delete_diagnosis_record(
         return error_response(msg=f"删除诊断记录失败: {str(e)}", code=500)
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除诊断记录")
+@router.delete("/", response_model=ResponseModel, summary="批量删除诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_DELETE'))])
 async def batch_delete_diagnosis_records(
     delete_request: DiagnosisRecordDeleteRequest,
     session: Session = Depends(get_db)
@@ -547,4 +548,3 @@ async def batch_delete_diagnosis_records(
         session.rollback()
         log.error(f"批量删除诊断记录失败: {str(e)}")
         return error_response(msg=f"批量删除诊断记录失败: {str(e)}", code=500)
-

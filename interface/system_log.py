@@ -12,6 +12,7 @@ from models.system_log import SystemLog
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 from datetime import timedelta
 
 router = APIRouter()
@@ -46,7 +47,7 @@ class SystemLogResponse(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.get("/{log_id}", response_model=ResponseModel, summary="根据ID获取单条日志")
+@router.get("/{log_id}", response_model=ResponseModel, summary="根据ID获取单条日志", dependencies=[Depends(get_current_user_info), Depends(require_permission('SYSTEM_LOG_VIEW'))])
 def get_system_log(log_id: int, db: Session = Depends(get_db)):
     """
     根据ID获取单条系统日志
@@ -65,7 +66,7 @@ def get_system_log(log_id: int, db: Session = Depends(get_db)):
     return success_response(data=log_response.model_dump())
 
 
-@router.get("/", response_model=ResponseModel, summary="查询系统日志列表")
+@router.get("/", response_model=ResponseModel, summary="查询系统日志列表", dependencies=[Depends(get_current_user_info), Depends(require_permission('SYSTEM_LOG_VIEW'))])
 def list_system_logs(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -172,7 +173,7 @@ def list_system_logs(
     })
 
 
-@router.get("/stats/summary", response_model=ResponseModel, summary="获取日志统计摘要")
+@router.get("/stats/summary", response_model=ResponseModel, summary="获取日志统计摘要", dependencies=[Depends(get_current_user_info), Depends(require_permission('SYSTEM_LOG_VIEW'))])
 def get_log_statistics(
     start_date: Optional[date] = Query(None, description="开始日期"),
     end_date: Optional[date] = Query(None, description="结束日期"),
@@ -251,7 +252,7 @@ def get_log_statistics(
     })
 
 
-@router.delete("/cleanup", response_model=ResponseModel, summary="清理旧日志（管理员功能）")
+@router.delete("/cleanup", response_model=ResponseModel, summary="清理旧日志（管理员功能）", dependencies=[Depends(get_current_user_info), Depends(require_permission('SYSTEM_SETTINGS'))])
 def cleanup_old_logs(
     days: int = Query(30, ge=1, le=365, description="保留最近多少天的日志"),
     db: Session = Depends(get_db)
@@ -290,7 +291,6 @@ def cleanup_old_logs(
         "deleted_count": deleted_count,
         "cutoff_date": cutoff_date.isoformat()
     })
-
 
 
 

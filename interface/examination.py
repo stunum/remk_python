@@ -20,6 +20,7 @@ from models.fundus_image import FundusImage
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -241,7 +242,7 @@ class ExaminationDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建检查记录")
+@router.post("/", response_model=ResponseModel, summary="创建检查记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_CREATE'))])
 async def create_examination(
     examination: ExaminationCreate,
     session: Session = Depends(get_db)
@@ -306,7 +307,7 @@ async def create_examination(
         return error_response(msg=f"创建检查记录失败: {str(e)}", code=500)
 
 
-@router.get("/", response_model=ResponseModel, summary="分页查询检查记录")
+@router.get("/", response_model=ResponseModel, summary="分页查询检查记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_VIEW'))])
 async def get_examinations(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -439,7 +440,7 @@ async def get_examinations(
         return error_response(msg=f"查询检查记录列表失败: {str(e)}", code=500)
 
 
-@router.get("/{examination_id}", response_model=ResponseModel, summary="查询单个检查记录")
+@router.get("/{examination_id}", response_model=ResponseModel, summary="查询单个检查记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_VIEW'))])
 async def get_examination(
     examination_id: int,
     session: Session = Depends(get_db)
@@ -505,7 +506,7 @@ async def get_examination(
         return error_response(msg=f"查询检查记录失败: {str(e)}", code=500)
 
 
-@router.get("/by-number/{examination_number}", response_model=ResponseModel, summary="根据检查编号查询")
+@router.get("/by-number/{examination_number}", response_model=ResponseModel, summary="根据检查编号查询", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_VIEW'))])
 async def get_examination_by_number(
     examination_number: str,
     session: Session = Depends(get_db)
@@ -535,7 +536,7 @@ async def get_examination_by_number(
         return error_response(msg=f"查询检查记录失败: {str(e)}", code=500)
 
 
-@router.put("/{examination_id}", response_model=ResponseModel, summary="更新检查记录")
+@router.put("/{examination_id}", response_model=ResponseModel, summary="更新检查记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_EDIT'))])
 async def update_examination(
     examination_id: int,
     examination_update: ExaminationUpdate,
@@ -593,7 +594,7 @@ async def update_examination(
         return error_response(msg=f"更新检查记录失败: {str(e)}", code=500)
 
 
-@router.delete("/{examination_id}", response_model=ResponseModel, summary="删除单个检查记录")
+@router.delete("/{examination_id}", response_model=ResponseModel, summary="删除单个检查记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_DELETE'))])
 async def delete_examination(
     examination_id: int,
     session: Session = Depends(get_db)
@@ -627,7 +628,7 @@ async def delete_examination(
         return error_response(msg=f"删除检查记录失败: {str(e)}", code=500)
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除检查记录")
+@router.delete("/", response_model=ResponseModel, summary="批量删除检查记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('EXAMINATION_DELETE'))])
 async def batch_delete_examinations(
     delete_request: ExaminationDeleteRequest,
     session: Session = Depends(get_db)

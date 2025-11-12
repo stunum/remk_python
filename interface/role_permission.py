@@ -13,6 +13,7 @@ from models.permission import Permission
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -68,7 +69,7 @@ class RolePermissionDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建角色权限关联")
+@router.post("/", response_model=ResponseModel, summary="创建角色权限关联", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
 def create_role_permission(role_permission_data: RolePermissionCreate, db: Session = Depends(get_db)):
     """
     创建角色权限关联
@@ -114,7 +115,7 @@ def create_role_permission(role_permission_data: RolePermissionCreate, db: Sessi
     return success_response(data=role_permission_response.model_dump())
 
 
-@router.get("/{role_permission_id}", response_model=ResponseModel, summary="根据ID获取角色权限关联")
+@router.get("/{role_permission_id}", response_model=ResponseModel, summary="根据ID获取角色权限关联", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
 def get_role_permission(role_permission_id: int, db: Session = Depends(get_db)):
     """
     根据ID获取角色权限关联信息（排除已软删除的关联）
@@ -154,7 +155,7 @@ def get_role_permission(role_permission_id: int, db: Session = Depends(get_db)):
     return success_response(data=detail_response.model_dump())
 
 
-@router.get("/", response_model=ResponseModel, summary="查询角色权限关联列表")
+@router.get("/", response_model=ResponseModel, summary="查询角色权限关联列表", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
 def list_role_permissions(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -240,7 +241,7 @@ def list_role_permissions(
     })
 
 
-@router.put("/{role_permission_id}", response_model=ResponseModel, summary="更新角色权限关联")
+@router.put("/{role_permission_id}", response_model=ResponseModel, summary="更新角色权限关联", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
 def update_role_permission(role_permission_id: int, role_permission_data: RolePermissionUpdate, db: Session = Depends(get_db)):
     """
     更新角色权限关联（排除已软删除的关联）
@@ -278,7 +279,7 @@ def update_role_permission(role_permission_id: int, role_permission_data: RolePe
     return success_response(data=role_permission_response.model_dump())
 
 
-@router.delete("/{role_permission_id}", response_model=ResponseModel, summary="删除角色权限关联（软删除）")
+@router.delete("/{role_permission_id}", response_model=ResponseModel, summary="删除角色权限关联（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
 def delete_role_permission(role_permission_id: int, db: Session = Depends(get_db)):
     """
     删除角色权限关联（软删除）
@@ -305,7 +306,7 @@ def delete_role_permission(role_permission_id: int, db: Session = Depends(get_db
     return success_response(data={"deleted_id": role_permission_id})
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除角色权限关联（软删除）")
+@router.delete("/", response_model=ResponseModel, summary="批量删除角色权限关联（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
 def delete_role_permissions(delete_request: RolePermissionDeleteRequest, db: Session = Depends(get_db)):
     """
     批量软删除角色权限关联
@@ -340,4 +341,3 @@ def delete_role_permissions(delete_request: RolePermissionDeleteRequest, db: Ses
         "deleted_count": deleted_count,
         "deleted_ids": deleted_ids
     })
-

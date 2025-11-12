@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field as PydanticField
 
 from models.user import User
+from models.user_role import UserRole
+from models.role_permission import RolePermission
+from models.permission import Permission
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from utils.jwt_auth import (
@@ -96,6 +99,44 @@ class UserInfoResponse(BaseModel):
 
 # ==================== API 端点 ====================
 
+def get_user_permissions(session: Session, user_id: int, user_type: str) -> list:
+    """
+    聚合用户有效权限(permission_code列表)
+    - admin用户返回全部有效权限
+    - 其他用户通过用户角色→角色权限→权限聚合
+    """
+    if user_type == 'admin':
+        perms = session.query(Permission.permission_code).filter(
+            Permission.is_active.is_(True),
+            Permission.deleted_at.is_(None)
+        ).all()
+        return [p[0] for p in perms]
+
+    role_ids = session.query(UserRole.role_id).filter(
+        UserRole.user_id == user_id,
+        UserRole.is_active.is_(True),
+        UserRole.deleted_at.is_(None)
+    ).all()
+    if not role_ids:
+        return []
+    role_id_list = [r[0] for r in role_ids]
+
+    perm_ids = session.query(RolePermission.permission_id).filter(
+        RolePermission.role_id.in_(role_id_list),
+        RolePermission.is_active.is_(True),
+        RolePermission.deleted_at.is_(None)
+    ).all()
+    if not perm_ids:
+        return []
+    perm_id_list = [rp[0] for rp in perm_ids]
+
+    perms = session.query(Permission.permission_code).filter(
+        Permission.id.in_(perm_id_list),
+        Permission.is_active.is_(True),
+        Permission.deleted_at.is_(None)
+    ).all()
+    return [p[0] for p in perms]
+
 @router.post("/login", response_model=ResponseModel, summary="用户登录")
 async def login(
     login_data: LoginRequest,
@@ -132,8 +173,8 @@ async def login(
             log.warning(f"登录失败: 密码错误 - {login_data.username}")
             return error_response(msg="用户名或密码错误", code=401)
         
-        # TODO: 从数据库查询用户权限（暂时使用空列表）
-        permissions = []
+        # 聚合用户权限
+        permissions = get_user_permissions(session, user.id, user.user_type)
         
         # 创建令牌对
         token_data = create_token_pair(
@@ -189,10 +230,7 @@ async def refresh_token(
     返回新的JWT访问令牌和刷新令牌
     """
     try:
-        # 刷新令牌
-        token_data = refresh_access_token(refresh_data.refresh_token)
-        
-        # 从令牌中获取用户信息
+        # 验证刷新令牌并提取用户信息
         payload = decode_token(refresh_data.refresh_token)
         user_id = payload.get("user_id")
         
@@ -210,6 +248,15 @@ async def refresh_token(
             log.warning(f"刷新令牌失败: 用户状态异常 - {user.username}, 状态={user.status}")
             return error_response(msg=f"用户账号已{user.status}", code=403)
         
+        # 重新聚合权限并生成新令牌对
+        permissions = get_user_permissions(session, user.id, user.user_type)
+        token_data = create_token_pair(
+            user_id=user.id,
+            username=user.username,
+            user_type=user.user_type,
+            permissions=permissions
+        )
+
         # 构建响应
         response_data = {
             "token": token_data["access_token"],
@@ -342,4 +389,3 @@ async def change_password(
         session.rollback()
         log.error(f"修改密码失败: {str(e)}")
         return error_response(msg=f"修改密码失败: {str(e)}", code=500)
-

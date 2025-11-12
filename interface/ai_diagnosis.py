@@ -17,6 +17,7 @@ from models.ai_diagnosis import AIDiagnosis
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -153,7 +154,7 @@ class AIDiagnosisDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建AI诊断记录")
+@router.post("/", response_model=ResponseModel, summary="创建AI诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_CREATE'))])
 async def create_ai_diagnosis(
     diagnosis: AIDiagnosisCreate,
     session: Session = Depends(get_db)
@@ -186,7 +187,7 @@ async def create_ai_diagnosis(
         return error_response(msg=f"创建AI诊断记录失败: {str(e)}", code=500)
 
 
-@router.get("/", response_model=ResponseModel, summary="分页查询AI诊断")
+@router.get("/", response_model=ResponseModel, summary="分页查询AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_VIEW'))])
 async def get_ai_diagnoses(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -289,7 +290,7 @@ async def get_ai_diagnoses(
         return error_response(msg=f"查询AI诊断列表失败: {str(e)}", code=500)
 
 
-@router.get("/{diagnosis_id}", response_model=ResponseModel, summary="查询单个AI诊断")
+@router.get("/{diagnosis_id}", response_model=ResponseModel, summary="查询单个AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_VIEW'))])
 async def get_ai_diagnosis(
     diagnosis_id: int,
     session: Session = Depends(get_db)
@@ -319,7 +320,7 @@ async def get_ai_diagnosis(
         return error_response(msg=f"查询AI诊断失败: {str(e)}", code=500)
 
 
-@router.get("/by-image/{image_id}", response_model=ResponseModel, summary="根据图像ID查询AI诊断")
+@router.get("/by-image/{image_id}", response_model=ResponseModel, summary="根据图像ID查询AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_VIEW'))])
 async def get_ai_diagnoses_by_image(
     image_id: int,
     include_deleted: bool = Query(False, description="是否包含已删除记录"),
@@ -360,7 +361,7 @@ async def get_ai_diagnoses_by_image(
         return error_response(msg=f"查询AI诊断失败: {str(e)}", code=500)
 
 
-@router.put("/{diagnosis_id}", response_model=ResponseModel, summary="更新AI诊断")
+@router.put("/{diagnosis_id}", response_model=ResponseModel, summary="更新AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_EDIT'))])
 async def update_ai_diagnosis(
     diagnosis_id: int,
     diagnosis_update: AIDiagnosisUpdate,
@@ -412,7 +413,7 @@ async def update_ai_diagnosis(
         return error_response(msg=f"更新AI诊断失败: {str(e)}", code=500)
 
 
-@router.delete("/{diagnosis_id}", response_model=ResponseModel, summary="删除单个AI诊断")
+@router.delete("/{diagnosis_id}", response_model=ResponseModel, summary="删除单个AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_DELETE'))])
 async def delete_ai_diagnosis(
     diagnosis_id: int,
     session: Session = Depends(get_db)
@@ -446,7 +447,7 @@ async def delete_ai_diagnosis(
         return error_response(msg=f"删除AI诊断失败: {str(e)}", code=500)
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除AI诊断")
+@router.delete("/", response_model=ResponseModel, summary="批量删除AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_DELETE'))])
 async def batch_delete_ai_diagnoses(
     delete_request: AIDiagnosisDeleteRequest,
     session: Session = Depends(get_db)
@@ -494,4 +495,3 @@ async def batch_delete_ai_diagnoses(
         session.rollback()
         log.error(f"批量删除AI诊断失败: {str(e)}")
         return error_response(msg=f"批量删除AI诊断失败: {str(e)}", code=500)
-

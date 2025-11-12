@@ -12,6 +12,7 @@ from models.patient import Patient
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -87,7 +88,7 @@ class PatientDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建新患者")
+@router.post("/", response_model=ResponseModel, summary="创建新患者", dependencies=[Depends(get_current_user_info), Depends(require_permission('PATIENT_CREATE'))])
 def create_patient(patient_data: PatientCreate, db: Session = Depends(get_db)):
     """
     创建新患者
@@ -124,7 +125,7 @@ def create_patient(patient_data: PatientCreate, db: Session = Depends(get_db)):
     return success_response(data=patient_response.model_dump())
 
 
-@router.get("/{patient_id}", response_model=ResponseModel, summary="根据ID获取单个患者")
+@router.get("/{patient_id}", response_model=ResponseModel, summary="根据ID获取单个患者", dependencies=[Depends(get_current_user_info), Depends(require_permission('PATIENT_VIEW'))])
 def get_patient(patient_id: int, db: Session = Depends(get_db)):
     """
     根据ID获取单个患者信息（排除已软删除的患者）
@@ -148,7 +149,7 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
     return success_response(data=patient_response.model_dump())
 
 
-@router.get("/", response_model=ResponseModel, summary="分页查询患者列表")
+@router.get("/", response_model=ResponseModel, summary="分页查询患者列表", dependencies=[Depends(get_current_user_info), Depends(require_permission('PATIENT_VIEW'))])
 def list_patients(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -221,7 +222,7 @@ def list_patients(
     })
 
 
-@router.put("/{patient_id}", response_model=ResponseModel, summary="更新患者信息")
+@router.put("/{patient_id}", response_model=ResponseModel, summary="更新患者信息", dependencies=[Depends(get_current_user_info), Depends(require_permission('PATIENT_EDIT'))])
 def update_patient(patient_id: int, patient_data: PatientUpdate, db: Session = Depends(get_db)):
     """
     更新患者信息（排除已软删除的患者）
@@ -261,7 +262,7 @@ def update_patient(patient_id: int, patient_data: PatientUpdate, db: Session = D
     return success_response(data=patient_response.model_dump())
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除患者（软删除）")
+@router.delete("/", response_model=ResponseModel, summary="批量删除患者（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('PATIENT_DELETE'))])
 def delete_patients(delete_request: PatientDeleteRequest, db: Session = Depends(get_db)):
     """
     批量软删除患者
@@ -304,7 +305,7 @@ def delete_patients(delete_request: PatientDeleteRequest, db: Session = Depends(
 
 # ==================== 额外的便捷端点 ====================
 
-@router.get("/by-patient-id/{patient_id}", response_model=ResponseModel, summary="根据患者编号查询")
+@router.get("/by-patient-id/{patient_id}", response_model=ResponseModel, summary="根据患者编号查询", dependencies=[Depends(get_current_user_info), Depends(require_permission('PATIENT_VIEW'))])
 def get_patient_by_patient_id(patient_id: str, db: Session = Depends(get_db)):
     """
     根据患者编号（patient_id字段）查询患者信息

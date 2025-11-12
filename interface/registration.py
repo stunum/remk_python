@@ -17,6 +17,7 @@ from models.registration import Registration
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -189,7 +190,7 @@ class RegistrationDeleteRequest(BaseModel):
 
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建挂号记录")
+@router.post("/", response_model=ResponseModel, summary="创建挂号记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_CREATE'))])
 async def create_registration(
     registration: RegistrationCreate,
     session: Session = Depends(get_db)
@@ -235,7 +236,7 @@ async def create_registration(
         return error_response(msg=f"创建挂号记录失败: {str(e)}", code=500)
 
 
-@router.get("/", response_model=ResponseModel, summary="分页查询挂号记录")
+@router.get("/", response_model=ResponseModel, summary="分页查询挂号记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_VIEW'))])
 async def get_registrations(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -375,7 +376,7 @@ async def get_registrations(
         return error_response(msg=f"查询挂号记录列表失败: {str(e)}", code=500)
 
 
-@router.get("/{registration_id}", response_model=ResponseModel, summary="查询单个挂号记录")
+@router.get("/{registration_id}", response_model=ResponseModel, summary="查询单个挂号记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_VIEW'))])
 async def get_registration(
     registration_id: int,
     session: Session = Depends(get_db)
@@ -405,7 +406,7 @@ async def get_registration(
         return error_response(msg=f"查询挂号记录失败: {str(e)}", code=500)
 
 
-@router.get("/by-number/{registration_number}", response_model=ResponseModel, summary="根据挂号编号查询")
+@router.get("/by-number/{registration_number}", response_model=ResponseModel, summary="根据挂号编号查询", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_VIEW'))])
 async def get_registration_by_number(
     registration_number: str,
     session: Session = Depends(get_db)
@@ -435,7 +436,7 @@ async def get_registration_by_number(
         return error_response(msg=f"查询挂号记录失败: {str(e)}", code=500)
 
 
-@router.put("/{registration_id}", response_model=ResponseModel, summary="更新挂号记录")
+@router.put("/{registration_id}", response_model=ResponseModel, summary="更新挂号记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_EDIT'))])
 async def update_registration(
     registration_id: int,
     registration_update: RegistrationUpdate,
@@ -495,7 +496,7 @@ async def update_registration(
         return error_response(msg=f"更新挂号记录失败: {str(e)}", code=500)
 
 
-@router.delete("/{registration_id}", response_model=ResponseModel, summary="删除单个挂号记录")
+@router.delete("/{registration_id}", response_model=ResponseModel, summary="删除单个挂号记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_DELETE'))])
 async def delete_registration(
     registration_id: int,
     session: Session = Depends(get_db)
@@ -529,7 +530,7 @@ async def delete_registration(
         return error_response(msg=f"删除挂号记录失败: {str(e)}", code=500)
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除挂号记录")
+@router.delete("/", response_model=ResponseModel, summary="批量删除挂号记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('REGISTRATION_DELETE'))])
 async def batch_delete_registrations(
     delete_request: RegistrationDeleteRequest,
     session: Session = Depends(get_db)

@@ -375,3 +375,33 @@ def require_user_type(*allowed_types: str):
         return user_info
     return type_checker
 
+
+def require_permissions_any(permissions: list):
+    """
+    检查用户是否拥有任意一个指定权限
+    """
+    def checker(user_info: Dict[str, Any] = Depends(get_current_user_info)) -> Dict[str, Any]:
+        user_perms = set(user_info.get("permissions", []))
+        if not any(p in user_perms for p in permissions):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"需要任意权限: {', '.join(permissions)}"
+            )
+        return user_info
+    return checker
+
+
+def require_permissions_all(permissions: list):
+    """
+    检查用户是否拥有所有指定权限
+    """
+    def checker(user_info: Dict[str, Any] = Depends(get_current_user_info)) -> Dict[str, Any]:
+        user_perms = set(user_info.get("permissions", []))
+        missing = [p for p in permissions if p not in user_perms]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"缺少权限: {', '.join(missing)}"
+            )
+        return user_info
+    return checker

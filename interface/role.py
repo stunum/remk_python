@@ -8,9 +8,12 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field as PydanticField
 
 from models.role import Role
+from models.role_permission import RolePermission
+from models.permission import Permission
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
+from utils.jwt_auth import get_current_user_info, require_permission
 
 router = APIRouter()
 
@@ -55,9 +58,14 @@ class RoleDeleteRequest(BaseModel):
     role_ids: List[int] = PydanticField(..., min_length=1, description="要删除的角色ID列表")
 
 
+class RolePermissionsUpdate(BaseModel):
+    """角色权限更新请求模型"""
+    permission_ids: List[int] = PydanticField(..., min_length=0, description="角色应拥有的权限ID集合")
+
+
 # ==================== API 端点 ====================
 
-@router.post("/", response_model=ResponseModel, summary="创建新角色")
+@router.post("/", response_model=ResponseModel, summary="创建新角色", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_MANAGE'))])
 def create_role(role_data: RoleCreate, db: Session = Depends(get_db)):
     """
     创建新角色
@@ -100,7 +108,7 @@ def create_role(role_data: RoleCreate, db: Session = Depends(get_db)):
     return success_response(data=role_response.model_dump())
 
 
-@router.get("/{role_id}", response_model=ResponseModel, summary="根据ID获取单个角色")
+@router.get("/{role_id}", response_model=ResponseModel, summary="根据ID获取单个角色", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_MANAGE'))])
 def get_role(role_id: int, db: Session = Depends(get_db)):
     """
     根据ID获取单个角色信息（排除已软删除的角色）
@@ -124,7 +132,7 @@ def get_role(role_id: int, db: Session = Depends(get_db)):
     return success_response(data=role_response.model_dump())
 
 
-@router.get("/", response_model=ResponseModel, summary="查询角色列表")
+@router.get("/", response_model=ResponseModel, summary="查询角色列表", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_MANAGE'))])
 def list_roles(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -191,7 +199,7 @@ def list_roles(
     })
 
 
-@router.put("/{role_id}", response_model=ResponseModel, summary="更新角色信息")
+@router.put("/{role_id}", response_model=ResponseModel, summary="更新角色信息", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_MANAGE'))])
 def update_role(role_id: int, role_data: RoleUpdate, db: Session = Depends(get_db)):
     """
     更新角色信息（排除已软删除的角色）
@@ -241,7 +249,7 @@ def update_role(role_id: int, role_data: RoleUpdate, db: Session = Depends(get_d
     return success_response(data=role_response.model_dump())
 
 
-@router.delete("/{role_id}", response_model=ResponseModel, summary="删除单个角色（软删除）")
+@router.delete("/{role_id}", response_model=ResponseModel, summary="删除单个角色（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_MANAGE'))])
 def delete_role(role_id: int, db: Session = Depends(get_db)):
     """
     删除单个角色（软删除）
@@ -274,7 +282,7 @@ def delete_role(role_id: int, db: Session = Depends(get_db)):
     return success_response(data={"deleted_id": role_id})
 
 
-@router.delete("/", response_model=ResponseModel, summary="批量删除角色（软删除）")
+@router.delete("/", response_model=ResponseModel, summary="批量删除角色（软删除）", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_MANAGE'))])
 def delete_roles(delete_request: RoleDeleteRequest, db: Session = Depends(get_db)):
     """
     批量软删除角色
@@ -317,3 +325,91 @@ def delete_roles(delete_request: RoleDeleteRequest, db: Session = Depends(get_db
         "skipped_count": skipped_count
     })
 
+
+@router.get("/{role_id}/permissions", response_model=ResponseModel, summary="获取角色当前全部权限", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
+def get_role_permissions(role_id: int, db: Session = Depends(get_db)):
+    """
+    返回角色当前拥有的所有有效权限（过滤软删除与禁用）
+    - permissions: Permission 列表
+    """
+    role = db.query(Role).filter(Role.id == role_id, Role.deleted_at.is_(None)).first()
+    if not role:
+        return error_response(code=404, msg="角色未找到")
+
+    perms = (
+        db.query(Permission)
+        .join(RolePermission, RolePermission.permission_id == Permission.id)
+        .filter(
+            RolePermission.role_id == role_id,
+            RolePermission.deleted_at.is_(None),
+            RolePermission.is_active.is_(True),
+            Permission.deleted_at.is_(None),
+            Permission.is_active.is_(True)
+        )
+        .all()
+    )
+
+    data = [
+        {
+            "id": p.id,
+            "permission_name": p.permission_name,
+            "permission_code": p.permission_code,
+            "resource": p.resource,
+            "action": p.action,
+            "description": p.description,
+            "is_active": p.is_active,
+        }
+        for p in perms
+    ]
+    return success_response(data={"permissions": data})
+
+
+@router.put("/{role_id}/permissions", response_model=ResponseModel, summary="更新角色权限集合（覆盖式）", dependencies=[Depends(get_current_user_info), Depends(require_permission('ROLE_PERMISSION_ASSIGN'))])
+def update_role_permissions(role_id: int, req: RolePermissionsUpdate, db: Session = Depends(get_db)):
+    """
+    将角色的权限集合更新为传入的`permission_ids`（覆盖式）：
+    - 若存在但不在目标集合中，则软删除该关联
+    - 若不在现有集合中，则创建或恢复该关联
+    """
+    role = db.query(Role).filter(Role.id == role_id, Role.deleted_at.is_(None)).first()
+    if not role:
+        return error_response(code=404, msg="角色未找到")
+
+    target_ids = set(req.permission_ids or [])
+
+    # 现有关联（含软删除记录用于恢复）
+    assoc_records = db.query(RolePermission).filter(RolePermission.role_id == role_id).all()
+    current_active_ids = {ar.permission_id for ar in assoc_records if ar.deleted_at is None and ar.is_active}
+    assoc_by_perm = {ar.permission_id: ar for ar in assoc_records}
+
+    to_remove = current_active_ids - target_ids
+    to_add = target_ids - current_active_ids
+
+    # 软删除移除项
+    removed_count = 0
+    for pid in to_remove:
+        ar = assoc_by_perm.get(pid)
+        if ar and ar.deleted_at is None and ar.is_active:
+            ar.deleted_at = datetime.now()
+            removed_count += 1
+
+    # 添加或恢复新增项
+    added_count = 0
+    for pid in to_add:
+        ar = assoc_by_perm.get(pid)
+        if ar:
+            ar.deleted_at = None
+            ar.is_active = True
+            added_count += 1
+        else:
+            db.add(RolePermission(role_id=role_id, permission_id=pid, is_active=True))
+            added_count += 1
+
+    db.commit()
+
+    return success_response(data={
+        "role_id": role_id,
+        "added_count": added_count,
+        "removed_count": removed_count,
+        "permission_ids": list(target_ids)
+    })

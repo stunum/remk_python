@@ -2,8 +2,8 @@
 
 # 数据库配置
 database:
-  host: "111.229.22.40"
-  port: 15432
+  host: "127.0.0.1"
+  port: 5432
   user: "cw"
   password: "741856252"
   dbname: "eyes_db"
