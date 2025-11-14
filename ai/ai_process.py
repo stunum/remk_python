@@ -9,13 +9,12 @@ import cv2
 import numpy as np
 try:
     from ai import rgb_image_generate
+    model_path= resource_path("ai/model.onnx")
     colorizer = rgb_image_generate.ColorizationModel(model_path)
     log.info("AI 模块加载成功")
 except ImportError as e:
     log.error(f"缺少必需的依赖: {e}")
     raise RuntimeError(f"缺少必需的依赖: {e}")
-
-model_path= resource_path("ai/model.onnx")
 
 
 def process_colorization(ir_path: str, green_path: str, save_path: str) -> str:
