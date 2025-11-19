@@ -1,21 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_dynamic_libs
+from PyInstaller.building.datastruct import Tree
+from PyInstaller.building.build_main import Analysis, PYZ, EXE
 
-# PyInstaller -F main.py --add-data "ai/*.pkl;ai" --add-data "ai/*.onnx;ai" --add-data "ai/*.pyd;ai"  --hidden-import "uvicorn"  --hidden-import "fastapi" --hidden-import onnxruntime --hidden-import sklearn  --hidden-import scipy.signal
+binaries = collect_dynamic_libs('ai')
+
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('ai/*.pyd', 'ai'),('ai/*.onnx', 'ai'),('ai/*.pkl', 'ai')],
+    binaries=binaries,
+    datas=[Tree('ai', prefix='ai')],
     hiddenimports=['uvicorn', 'fastapi', 'onnxruntime', 'sklearn', 'scipy.signal'],
     hookspath=[],
-    hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
     noarchive=True,
     optimize=0,
 )
-pyz = PYZ(a.pure)
 
+pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
@@ -24,15 +26,5 @@ exe = EXE(
     [],
     name='main',
     debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=True,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
 )
