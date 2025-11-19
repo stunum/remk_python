@@ -4,12 +4,13 @@ from PyInstaller.building.datastruct import Tree
 from PyInstaller.building.build_main import Analysis, PYZ, EXE
 
 binaries = collect_dynamic_libs('ai')
-
+# Tree 返回 (src, dest, type)，需要取前两项
+ai_tree = [(src, dest) for src, dest, _type in Tree('ai', prefix='ai') if not src.endswith(".py")]
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=binaries,
-    datas=[Tree('ai', prefix='ai')],
+    datas=ai_tree,
     hiddenimports=['uvicorn', 'fastapi', 'onnxruntime', 'sklearn', 'scipy.signal'],
     hookspath=[],
     runtime_hooks=[],
