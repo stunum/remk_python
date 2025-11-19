@@ -1,11 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-# PyInstaller -F main.py --add-data "ai;ai"  --hidden-import "uvicorn"  --hidden-import "fastapi" --hidden-import onnxruntime --hidden-import sklearn  --hidden-import scipy.signal
+# PyInstaller -F main.py --add-data "ai/*.pkl;ai" --add-data "ai/*.onnx;ai" --add-data "ai/*.pyd;ai"  --hidden-import "uvicorn"  --hidden-import "fastapi" --hidden-import onnxruntime --hidden-import sklearn  --hidden-import scipy.signal
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('ai', 'ai')],
+    datas=[('ai/*.pyd', 'ai'),('ai/*.onnx', 'ai'),('ai/*.pkl', 'ai')],
     hiddenimports=['uvicorn', 'fastapi', 'onnxruntime', 'sklearn', 'scipy.signal'],
     hookspath=[],
     hooksconfig={},
