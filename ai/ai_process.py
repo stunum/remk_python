@@ -7,9 +7,10 @@ from utils.path import resource_path
 import os
 import cv2
 import numpy as np
+import platform
 try:
     from ai import rgb_image_generate
-    model_path= resource_path("ai/model.onnx")
+    model_path= resource_path("ai/model.onnx") if platform.system() =="Darwin" else resource_path("""ai\model.onnx""")
     colorizer = rgb_image_generate.ColorizationModel(model_path)
     log.info("AI 模块加载成功")
 except ImportError as e:
