@@ -1,49 +1,40 @@
-# 眼底检查系统配置文件
-
-# 数据库配置
 database:
-  host: "127.0.0.1"
+  host: 127.0.0.1
   port: 5432
-  user: "cw"
-  password: "741856252"
-  dbname: "eyes_db"
-  sslmode: "disable"
-  timezone: "Asia/Shanghai"
-  # 连接池配置
-  max_idle_conns: 10      # 最大空闲连接数
-  max_open_conns: 100     # 最大打开连接数
-  conn_max_lifetime: 3600 # 连接最大生存时间（秒）
-  log_level: "debug"     # 数据库日志级别
-
-# 本机服务器配置
+  user: cw
+  password: '741856252'
+  dbname: eyes_db
+  sslmode: disable
+  timezone: Asia/Shanghai
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+  log_level: debug
 server:
-  host: "0.0.0.0"
+  host: 0.0.0.0
   port: 8080
-
-# 第三方服务配置
 third_party:
-  base_url: "http://localhost"  # 第三方服务基础URL
-  port: 25512                   # 第三方服务端口
-  timeout: 30                   # 请求超时时间（秒）
-  retry_count: 3                # 重试次数
-
-# JWT配置
+  base_url: http://localhost
+  port: 25512
+  timeout: 30
+  retry_count: 3
 jwt:
-  secret_key: "eyes_remk_jwt_secret_key_2024"
-  password_salt: "eyes_remk_system_salt_change_in_production"
+  secret_key: eyes_remk_jwt_secret_key_2024
+  password_salt: eyes_remk_system_salt_change_in_production
   token_expire_hours: 24
-  algorithm: "HS256"
+  algorithm: HS256
   access_token_expire_minutes: 1440
   refresh_token_expire_days: 7
-  
-# 日志配置
 logging:
-  level: "debug"        # 日志级别: trace, debug, info, warn, error, fatal, panic
-  format: "text"       # 日志格式: text 或 json
-  output: "file"     # 输出: stdout 或 file
-  file_path: "./logs/app.log" # 当 output 为 file 时使用
-  report_caller: false  # 是否显示调用者信息
-  rotation: "100 MB"
-  retention: "7 days"
-  compression: "zip"
-save_folder_path: "/mnt/tmp/"
+  level: debug
+  format: text
+  output: file
+  file_path: ./logs/app.log
+  report_caller: false
+  rotation: 100 MB
+  retention: 7 days
+  compression: zip
+save_folder_path: /mnt/tmp/
+image_view:
+  flipx: false
+  flipy: false

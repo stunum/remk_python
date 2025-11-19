@@ -109,19 +109,31 @@ class SaveFolderPathUpdate(BaseModel):
     save_folder_path: str
 
 
+class ImageViewFlipResponse(BaseModel):
+    """检查实时图像x/y轴图像反转配置"""
+    flipx: bool
+    flipy: bool
+
+
+class ImageViewFlipUpdate(BaseModel):
+    """检查实时图像x/y轴图像反转配置"""
+    flipx: bool
+    flipy: bool
+
 # ========== 数据库配置接口 ==========
+
 
 @router.get("/database", summary="获取数据库配置")
 async def get_database_config(current_user: dict = Depends(get_current_user)):
     """
     获取当前数据库配置
-    
+
     需要用户认证
     """
     try:
         db_config = config.config.database
         log.info(f"用户 {current_user.get('username')} 获取数据库配置")
-        
+
         return success_response(data={
             "host": db_config.host,
             "port": db_config.port,
@@ -147,13 +159,13 @@ async def update_database_config(
 ):
     """
     更新数据库配置
-    
+
     只更新提供的字段，未提供的字段保持不变
     需要用户认证
     """
     try:
         db_config = config.config.database
-        
+
         # 更新提供的字段
         if update_data.host is not None:
             db_config.host = update_data.host
@@ -177,12 +189,12 @@ async def update_database_config(
             db_config.conn_max_lifetime = update_data.conn_max_lifetime
         if update_data.log_level is not None:
             db_config.log_level = update_data.log_level
-        
+
         # 保存配置到文件
         config.save()
-        
+
         log.info(f"用户 {current_user.get('username')} 更新了数据库配置")
-        
+
         return success_response(msg="数据库配置更新成功")
     except ConfigError as e:
         log.error(f"更新数据库配置失败: {str(e)}")
@@ -198,13 +210,13 @@ async def update_database_config(
 async def get_third_party_config(current_user: dict = Depends(get_current_user)):
     """
     获取当前第三方服务配置
-    
+
     需要用户认证
     """
     try:
         tp_config = config.config.third_party
         log.info(f"用户 {current_user.get('username')} 获取第三方服务配置")
-        
+
         return success_response(data={
             "base_url": tp_config.base_url,
             "port": tp_config.port,
@@ -223,13 +235,13 @@ async def update_third_party_config(
 ):
     """
     更新第三方服务配置
-    
+
     只更新提供的字段，未提供的字段保持不变
     需要用户认证
     """
     try:
         tp_config = config.config.third_party
-        
+
         # 更新提供的字段
         if update_data.base_url is not None:
             tp_config.base_url = update_data.base_url
@@ -239,12 +251,12 @@ async def update_third_party_config(
             tp_config.timeout = update_data.timeout
         if update_data.retry_count is not None:
             tp_config.retry_count = update_data.retry_count
-        
+
         # 保存配置到文件
         config.save()
-        
+
         log.info(f"用户 {current_user.get('username')} 更新了第三方服务配置")
-        
+
         return success_response(msg="第三方服务配置更新成功")
     except ConfigError as e:
         log.error(f"更新第三方服务配置失败: {str(e)}")
@@ -260,13 +272,13 @@ async def update_third_party_config(
 async def get_server_config(current_user: dict = Depends(get_current_user)):
     """
     获取当前服务器配置
-    
+
     需要用户认证
     """
     try:
         server_config = config.config.server
         log.info(f"用户 {current_user.get('username')} 获取服务器配置")
-        
+
         return success_response(data={
             "host": server_config.host,
             "port": server_config.port
@@ -283,27 +295,27 @@ async def update_server_config(
 ):
     """
     更新服务器配置
-    
+
     只更新提供的字段，未提供的字段保持不变
     需要用户认证
-    
+
     注意：更新服务器配置后需要重启服务才能生效
     """
     try:
         server_config = config.config.server
-        
+
         # 更新提供的字段
         if update_data.host is not None:
             server_config.host = update_data.host
         if update_data.port is not None:
             server_config.port = update_data.port
-        
+
         # 保存配置到文件
         config.save()
-        
+
         log.info(f"用户 {current_user.get('username')} 更新了服务器配置")
         log.warning("服务器配置已更新，需要重启服务才能生效")
-        
+
         return success_response(msg="服务器配置更新成功，需要重启服务才能生效")
     except ConfigError as e:
         log.error(f"更新服务器配置失败: {str(e)}")
@@ -319,13 +331,13 @@ async def update_server_config(
 async def get_logging_config(current_user: dict = Depends(get_current_user)):
     """
     获取当前日志配置
-    
+
     需要用户认证
     """
     try:
         logging_config = config.config.logging
         log.info(f"用户 {current_user.get('username')} 获取日志配置")
-        
+
         return success_response(data={
             "level": logging_config.level,
             "format": logging_config.format,
@@ -348,15 +360,15 @@ async def update_logging_config(
 ):
     """
     更新日志配置
-    
+
     只更新提供的字段，未提供的字段保持不变
     需要用户认证
-    
+
     注意：更新日志配置后需要重启服务才能生效
     """
     try:
         logging_config = config.config.logging
-        
+
         # 更新提供的字段
         if update_data.level is not None:
             logging_config.level = update_data.level
@@ -374,13 +386,13 @@ async def update_logging_config(
             logging_config.retention = update_data.retention
         if update_data.compression is not None:
             logging_config.compression = update_data.compression
-        
+
         # 保存配置到文件
         config.save()
-        
+
         log.info(f"用户 {current_user.get('username')} 更新了日志配置")
         log.warning("日志配置已更新，需要重启服务才能生效")
-        
+
         return success_response(msg="日志配置更新成功，需要重启服务才能生效")
     except ConfigError as e:
         log.error(f"更新日志配置失败: {str(e)}")
@@ -396,13 +408,13 @@ async def update_logging_config(
 async def get_save_folder_path(current_user: dict = Depends(get_current_user)):
     """
     获取当前保存文件夹路径配置
-    
+
     需要用户认证
     """
     try:
         save_path = config.config.save_folder_path
         log.info(f"用户 {current_user.get('username')} 获取保存文件夹路径配置")
-        
+
         return success_response(data={
             "save_folder_path": save_path
         })
@@ -418,18 +430,19 @@ async def update_save_folder_path(
 ):
     """
     更新保存文件夹路径配置
-    
+
     需要用户认证
     """
     try:
         # 更新保存文件夹路径
         config.config.save_folder_path = update_data.save_folder_path
-        
+
         # 保存配置到文件
         config.save()
-        
-        log.info(f"用户 {current_user.get('username')} 更新了保存文件夹路径配置: {update_data.save_folder_path}")
-        
+
+        log.info(
+            f"用户 {current_user.get('username')} 更新了保存文件夹路径配置: {update_data.save_folder_path}")
+
         return success_response(msg="保存文件夹路径配置更新成功")
     except ConfigError as e:
         log.error(f"更新保存文件夹路径配置失败: {str(e)}")
@@ -438,3 +451,54 @@ async def update_save_folder_path(
         log.error(f"更新保存文件夹路径配置失败: {str(e)}")
         return error_response(msg=f"更新保存文件夹路径配置失败: {str(e)}", code=500)
 
+
+# ========== 检查实时图像x/y轴图像反转配置接口 ==========
+
+@router.get("/image-view-flip", summary="获取检查实时图像x/y轴图像反转配置")
+async def get_image_view_flip(current_user: dict = Depends(get_current_user)):
+    """
+    获取检查实时图像x/y轴图像反转配置
+
+    需要用户认证
+    """
+    try:
+        image_view = config.config.image_view
+        log.info(f"用户 {current_user.get('username')} 获取检查实时图像x/y轴图像反转配置")
+
+        return success_response(data={
+            "flipx": image_view.flipx,
+            "flipy": image_view.flipy
+        })
+    except Exception as e:
+        log.error(f"获取检查实时图像x/y轴图像反转配置失败: {str(e)}")
+        return error_response(msg=f"获取检查实时图像x/y轴图像反转配置失败: {str(e)}", code=500)
+
+
+@router.put("/image-view-flip", summary="更新检查实时图像x/y轴图像反转配置")
+async def update_image_view_flip(
+    update_data: ImageViewFlipUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    更新检查实时图像x/y轴图像反转配置
+
+    需要用户认证
+    """
+    try:
+        # 更新保存文件夹路径
+        config.config.image_view.flipx = update_data.flipx
+        config.config.image_view.flipy = update_data.flipy
+
+        # 保存配置到文件
+        config.save()
+
+        log.info(
+            f"用户 {current_user.get('username')} 更新检查实时图像x/y轴图像反转配置 x:{update_data.flipx} y: {update_data.flipy}")
+
+        return success_response(msg="检查实时图像x/y轴图像反转配置更新成功")
+    except ConfigError as e:
+        log.error(f"更新检查实时图像x/y轴图像反转配置失败: {str(e)}")
+        return error_response(msg=f"更新检查实时图像x/y轴图像反转配置失败: {str(e)}", code=500)
+    except Exception as e:
+        log.error(f"更新检查实时图像x/y轴图像反转配置失败: {str(e)}")
+        return error_response(msg=f"更新检查实时图像x/y轴图像反转配置失败: {str(e)}", code=500)

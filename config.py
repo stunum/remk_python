@@ -63,6 +63,12 @@ class LoggingConfig:
     compression: str
 
 @dataclass
+class ImageView:
+    """第三方服务配置"""
+    flipx: bool
+    flipy: bool
+
+@dataclass
 class AppConfig:
     """应用总配置"""
     database: DatabaseConfig
@@ -71,6 +77,7 @@ class AppConfig:
     jwt: JWTConfig
     logging: LoggingConfig
     save_folder_path: str
+    image_view: ImageView
 
 
 class ConfigError(Exception):
@@ -185,7 +192,11 @@ class Config:
                     retention=config_data['logging']['retention'],
                     compression=config_data['logging']['compression']
                 ),
-                save_folder_path=config_data['save_folder_path']
+                save_folder_path=config_data['save_folder_path'],
+                image_view= ImageView(
+                    flipx = config_data['image_view']['flipx'],
+                    flipy = config_data['image_view']['flipy']
+                )
             )
         except KeyError as e:
             # 当缺少必要的配置项时抛出错误
