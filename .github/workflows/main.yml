@@ -31,10 +31,10 @@ jobs:
             echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
 
-      - name: Setup Python 3.10.14
+      - name: Setup Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10.14'    # ★ GitHub Actions 支持的 3.10 最新版
+          python-version: '3.10'    # ★ GitHub Actions 支持的 3.10 最新版
 
       - name: Install dependencies
         run: |
