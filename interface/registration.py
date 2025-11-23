@@ -31,8 +31,6 @@ class RegistrationCreate(BaseModel):
     patient_id: int = PydanticField(..., gt=0, description="患者ID")
     examination_type_id: int = PydanticField(..., gt=0, description="检查类型ID")
     doctor_id: Optional[int] = PydanticField(None, gt=0, description="医生ID")
-    examination_id: Optional[int] = PydanticField(
-        None, gt=0, description="关联检查记录ID")
     department: Optional[str] = PydanticField(
         None, max_length=100, description="科室")
     registration_date: date = PydanticField(..., description="挂号日期")
@@ -94,8 +92,6 @@ class RegistrationUpdate(BaseModel):
     examination_type_id: Optional[int] = PydanticField(
         None, gt=0, description="检查类型ID")
     doctor_id: Optional[int] = PydanticField(None, gt=0, description="医生ID")
-    examination_id: Optional[int] = PydanticField(
-        None, gt=0, description="关联检查记录ID")
     department: Optional[str] = PydanticField(
         None, max_length=100, description="科室")
     registration_date: Optional[date] = PydanticField(None, description="挂号日期")
@@ -146,7 +142,6 @@ class RegistrationResponse(BaseModel):
     patient_id: int
     examination_type_id: int
     doctor_id: Optional[int]
-    examination_id: Optional[int]
     department: Optional[str]
     registration_date: date
     registration_time: Optional[time_type]

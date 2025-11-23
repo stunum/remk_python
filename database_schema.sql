@@ -120,6 +120,7 @@ CREATE TABLE examinations (
     examination_number VARCHAR(50) NOT NULL UNIQUE,           -- 检查编号
     patient_id INTEGER NOT NULL REFERENCES patients(id),       -- 患者ID
     examination_type_id INTEGER NOT NULL REFERENCES examination_types(id),  -- 检查类型ID
+    registration_id INTEGER, -- 挂号ID(与registrations关联，可选，允许为空，外键约束将在registrations表创建后添加)
     doctor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,-- 主治医生ID
     technician_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- 检查技师ID
     examination_date DATE NOT NULL,                            -- 检查日期
@@ -144,6 +145,7 @@ COMMENT ON COLUMN examinations.id IS '检查记录ID';
 COMMENT ON COLUMN examinations.examination_number IS '检查编号';
 COMMENT ON COLUMN examinations.patient_id IS '患者ID';
 COMMENT ON COLUMN examinations.examination_type_id IS '检查类型ID';
+COMMENT ON COLUMN examinations.registration_id IS '挂号ID(与registrations关联，可选，允许为空)';
 COMMENT ON COLUMN examinations.doctor_id IS '主治医生ID';
 COMMENT ON COLUMN examinations.technician_id IS '检查技师ID';
 COMMENT ON COLUMN examinations.examination_date IS '检查日期';
@@ -170,7 +172,6 @@ CREATE TABLE registrations (
     patient_id INTEGER NOT NULL REFERENCES patients(id),       -- 患者ID
     examination_type_id INTEGER NOT NULL REFERENCES examination_types(id),  -- 检查类型ID
     doctor_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- 医生ID
-    examination_id INTEGER REFERENCES examinations(id) ON DELETE SET NULL, -- 检查记录ID(与examinations一对一关联，可选)
     department VARCHAR(100),                                   -- 科室
     registration_date DATE NOT NULL,                           -- 挂号日期
     registration_time TIME,                                    -- 挂号时间
@@ -202,7 +203,7 @@ COMMENT ON COLUMN registrations.registration_number IS '挂号编号';
 COMMENT ON COLUMN registrations.patient_id IS '患者ID';
 COMMENT ON COLUMN registrations.examination_type_id IS '检查类型ID';
 COMMENT ON COLUMN registrations.doctor_id IS '医生ID';
-COMMENT ON COLUMN registrations.examination_id IS '检查记录ID(与examinations一对一关联，可选)';
+COMMENT ON COLUMN examinations.registration_id IS '挂号ID(与registrations关联，可选)';
 COMMENT ON COLUMN registrations.department IS '科室';
 COMMENT ON COLUMN registrations.registration_date IS '挂号日期';
 COMMENT ON COLUMN registrations.registration_time IS '挂号时间';
@@ -228,35 +229,14 @@ COMMENT ON COLUMN registrations.updated_at IS '更新时间(带时区)';
 COMMENT ON COLUMN registrations.created_by IS '创建人';
 COMMENT ON COLUMN registrations.updated_by IS '更新人';
 
+-- 添加 examinations 表到 registrations 表的外键约束
+ALTER TABLE examinations
+    ADD CONSTRAINT fk_examinations_registration_id 
+    FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE SET NULL;
+
 -- 一一对应约束:每个检查记录最多被一个挂号记录关联
-ALTER TABLE registrations
-    ADD CONSTRAINT uq_registrations_examination UNIQUE (examination_id);
-
--- 验证挂号与检查记录关联的一致性(可选触发器)
-CREATE OR REPLACE FUNCTION validate_registration_examination_consistency()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- 如果设置了 examination_id，确保检查记录存在且未被其他挂号关联
-    IF NEW.examination_id IS NOT NULL THEN
-        -- 检查 examination 是否存在
-        IF NOT EXISTS (
-            SELECT 1 FROM examinations 
-            WHERE id = NEW.examination_id 
-            AND deleted_at IS NULL
-        ) THEN
-            RAISE EXCEPTION '检查记录不存在或已被删除: examination_id = %', NEW.examination_id;
-        END IF;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 创建触发器
-CREATE TRIGGER trg_registrations_validate_examination
-BEFORE INSERT OR UPDATE ON registrations
-FOR EACH ROW
-EXECUTE FUNCTION validate_registration_examination_consistency();
+-- 注意：现在关联关系已改为从 examinations 表指向 registrations 表
+-- 如果需要确保一个挂号只能关联一个检查记录，可以在 examinations 表的 registration_id 上添加唯一约束
 
 
 -- 5. 眼底影像管理表
@@ -595,12 +575,12 @@ CREATE INDEX idx_patients_status ON patients(status);
 CREATE INDEX idx_patients_deleted_at ON patients(deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX idx_examinations_patient_id ON examinations(patient_id);
 CREATE INDEX idx_examinations_doctor_id ON examinations(doctor_id);
+CREATE INDEX idx_examinations_registration_id ON examinations(registration_id);
 CREATE INDEX idx_examinations_date_status ON examinations(examination_date, status);
 CREATE INDEX idx_examinations_status ON examinations(status);
 CREATE INDEX idx_examinations_deleted_at ON examinations(deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX idx_registrations_patient_id ON registrations(patient_id);
 CREATE INDEX idx_registrations_doctor_id ON registrations(doctor_id);
-CREATE INDEX idx_registrations_examination_id ON registrations(examination_id);
 CREATE INDEX idx_registrations_status ON registrations(status);
 CREATE INDEX idx_registrations_scheduled_date ON registrations(scheduled_date);
 CREATE INDEX idx_registrations_registration_date ON registrations(registration_date);

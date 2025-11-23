@@ -479,9 +479,70 @@ def ensure_database_exists() -> None:
         admin_engine.dispose()
 
 
+def ensure_foreign_key_constraint(engine: Engine) -> None:
+    """
+    确保 examinations 表到 registrations 表的外键约束存在
+    这对于已存在的数据库或表创建顺序问题很重要
+    """
+    constraint_name = "fk_examinations_registration_id"
+    try:
+        with engine.connect() as connection:
+            # 检查约束是否已存在
+            result = connection.execute(
+                text("""
+                    SELECT 1 
+                    FROM information_schema.table_constraints 
+                    WHERE constraint_name = :constraint_name 
+                    AND table_name = 'examinations'
+                """),
+                {"constraint_name": constraint_name}
+            ).scalar()
+            
+            if not result:
+                # 检查 registration_id 列是否存在
+                column_exists = connection.execute(
+                    text("""
+                        SELECT 1 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'examinations' 
+                        AND column_name = 'registration_id'
+                    """)
+                ).scalar()
+                
+                if column_exists:
+                    # 添加外键约束（使用 autocommit 模式）
+                    try:
+                        connection.execute(
+                            text("""
+                                ALTER TABLE examinations
+                                ADD CONSTRAINT fk_examinations_registration_id 
+                                FOREIGN KEY (registration_id) 
+                                REFERENCES registrations(id) 
+                                ON DELETE SET NULL
+                            """)
+                        )
+                        connection.commit()
+                        print("✅ 已添加 examinations.registration_id 外键约束")
+                    except Exception as e:
+                        # 如果添加失败（可能因为数据不满足约束），记录警告但不中断初始化
+                        connection.rollback()
+                        print(f"⚠️ 添加外键约束失败: {e} (如果表已存在且包含数据，可能需要手动处理)")
+                else:
+                    print("ℹ️ examinations.registration_id 列不存在，跳过外键约束添加")
+            else:
+                print("ℹ️ examinations.registration_id 外键约束已存在")
+    except Exception as e:
+        # 即使检查失败也不中断初始化流程
+        print(f"⚠️ 检查外键约束时出错: {e}，继续初始化流程")
+
+
 def create_tables(engine: Engine) -> None:
     SQLModel.metadata.create_all(engine)
     print("✅ 已根据模型创建/更新所有数据表")
+    
+    # 确保 examinations 表到 registrations 表的外键约束存在
+    # 这对于已存在的数据库或表创建顺序问题很重要
+    ensure_foreign_key_constraint(engine)
 
 
 def init_admin_user(session: Session) -> User:

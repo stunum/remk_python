@@ -14,6 +14,7 @@ class Examination(SQLModel, table=True):
     examination_number: str = Field(max_length=50, unique=True, index=True)
     patient_id: int = Field(foreign_key="patients.id", index=True)
     examination_type_id: int = Field(foreign_key="examination_types.id")
+    registration_id: Optional[int] = Field(default=None, foreign_key="registrations.id", index=True)
     doctor_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
     technician_id: Optional[int] = Field(default=None, foreign_key="users.id")
     examination_date: date = Field(sa_column=Column(Date, nullable=False, index=True))

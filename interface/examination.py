@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field as PydanticField
 
 from models.examination import Examination
 from models.examination_type import ExaminationType
+from models.patient import Patient
+from interface.patient import PatientResponse
 from models.user import User
 from models.fundus_image import FundusImage
 from database import get_db
@@ -93,6 +95,7 @@ class ExaminationCreate(BaseModel):
         None, min_length=1, max_length=50, description="检查编号（唯一），如不提供则自动生成")
     patient_id: int = PydanticField(..., gt=0, description="患者ID")
     examination_type_id: int = PydanticField(..., gt=0, description="检查类型ID")
+    registration_id: Optional[int] = PydanticField(None, gt=0, description="挂号ID")
     doctor_id: Optional[int] = PydanticField(None, gt=0, description="检查医生ID")
     technician_id: Optional[int] = PydanticField(
         None, gt=0, description="技师ID")
@@ -141,6 +144,7 @@ class ExaminationUpdate(BaseModel):
     patient_id: Optional[int] = PydanticField(None, gt=0, description="患者ID")
     examination_type_id: Optional[int] = PydanticField(
         None, gt=0, description="检查类型ID")
+    registration_id: Optional[int] = PydanticField(None, gt=0, description="挂号ID")
     doctor_id: Optional[int] = PydanticField(None, gt=0, description="检查医生ID")
     technician_id: Optional[int] = PydanticField(
         None, gt=0, description="技师ID")
@@ -191,7 +195,7 @@ class UserInfo(BaseModel):
 
     class Config:
         from_attributes = True
-
+    
 
 class FundusImageInfo(BaseModel):
     """眼底图像信息模型"""
@@ -224,6 +228,7 @@ class ExaminationResponse(BaseModel):
     examination_number: str
     patient_id: int
     examination_type_id: int
+    registration_id: Optional[int]
     doctor_id: Optional[int]
     technician_id: Optional[int]
     examination_date: date
@@ -523,6 +528,14 @@ async def get_examination(
         # 构建响应数据，包含关联信息
         exam_dict = ExaminationResponse.model_validate(
             examination).model_dump()
+
+        # 查询关联的患者信息
+        if examination.patient_id:
+            patient_info = session.query(Patient).filter(
+                Patient.id == examination.patient_id
+            ).first()
+            if patient_info:
+                exam_dict['patient'] = PatientResponse.model_validate(patient_info).model_dump()
 
         # 查询关联的检查类型
         if examination.examination_type_id:

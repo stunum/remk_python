@@ -16,7 +16,6 @@ class Registration(SQLModel, table=True):
     patient_id: int = Field(foreign_key="patients.id", index=True)
     examination_type_id: int = Field(foreign_key="examination_types.id")
     doctor_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
-    examination_id: Optional[int] = Field(default=None, foreign_key="examinations.id", unique=True, index=True)
     department: Optional[str] = Field(default=None, max_length=100)
     registration_date: date = Field(sa_column=Column(Date, nullable=False, index=True))
     registration_time: Optional[time] = Field(default=None, sa_column=Column(Time))
