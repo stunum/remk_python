@@ -29,6 +29,8 @@ class AIDiagnosisCreate(BaseModel):
     image_id: int = PydanticField(..., gt=0, description="图像ID")
     ai_model_name: str = PydanticField(..., min_length=1, max_length=100, description="AI模型名称")
     ai_model_version: Optional[str] = PydanticField(None, max_length=50, description="AI模型版本")
+    detect_file_path: str = PydanticField(..., min_length=1,max_length=500, description="诊断文件路径")
+    thumbnail_data: Optional[str] = PydanticField(None, description="缩略图数据")
     diagnosis_result: dict = PydanticField(..., description="诊断结果（JSON）")
     confidence_score: Optional[Decimal] = PydanticField(None, ge=0, le=1, description="置信度分数（0-1）")
     processing_time_ms: Optional[int] = PydanticField(None, ge=0, description="处理时间（毫秒）")
@@ -38,7 +40,7 @@ class AIDiagnosisCreate(BaseModel):
     )
     risk_assessment: Optional[str] = PydanticField(None, description="风险评估")
     recommended_actions: Optional[str] = PydanticField(None, description="推荐行动")
-    diagnostic_markers: Optional[dict] = PydanticField(None, description="诊断标记（JSON）")
+    # diagnostic_markers: Optional[dict] = PydanticField(None, description="诊断标记（JSON）")
     processing_status: str = PydanticField(
         default='completed', 
         description="处理状态：pending/processing/completed/failed/timeout"
@@ -67,10 +69,10 @@ class AIDiagnosisCreate(BaseModel):
                 "severity_level": "mild",
                 "risk_assessment": "低风险，建议定期复查",
                 "recommended_actions": "3个月后复查",
-                "diagnostic_markers": {
-                    "microaneurysms": 5,
-                    "hemorrhages": 2
-                },
+                # "diagnostic_markers": {
+                #     "microaneurysms": 5,
+                #     "hemorrhages": 2
+                # },
                 "processing_status": "completed",
                 "review_status": "pending"
             }
@@ -81,6 +83,8 @@ class AIDiagnosisUpdate(BaseModel):
     """AI诊断更新模型"""
     ai_model_name: Optional[str] = PydanticField(None, min_length=1, max_length=100, description="AI模型名称")
     ai_model_version: Optional[str] = PydanticField(None, max_length=50, description="AI模型版本")
+    detect_file_path: str = PydanticField(..., min_length=1,max_length=500, description="诊断文件路径")
+    thumbnail_data: Optional[str] = PydanticField(None, description="缩略图数据")
     diagnosis_result: Optional[dict] = PydanticField(None, description="诊断结果（JSON）")
     confidence_score: Optional[Decimal] = PydanticField(None, ge=0, le=1, description="置信度分数（0-1）")
     processing_time_ms: Optional[int] = PydanticField(None, ge=0, description="处理时间（毫秒）")
@@ -90,7 +94,7 @@ class AIDiagnosisUpdate(BaseModel):
     )
     risk_assessment: Optional[str] = PydanticField(None, description="风险评估")
     recommended_actions: Optional[str] = PydanticField(None, description="推荐行动")
-    diagnostic_markers: Optional[dict] = PydanticField(None, description="诊断标记（JSON）")
+    # diagnostic_markers: Optional[dict] = PydanticField(None, description="诊断标记（JSON）")
     processing_status: Optional[str] = PydanticField(
         None, 
         description="处理状态：pending/processing/completed/failed/timeout"
@@ -119,13 +123,15 @@ class AIDiagnosisResponse(BaseModel):
     image_id: int
     ai_model_name: str
     ai_model_version: Optional[str]
+    detect_file_path: str
+    thumbnail_data: Optional[str]
     diagnosis_result: dict
     confidence_score: Optional[Decimal]
     processing_time_ms: Optional[int]
     severity_level: Optional[str]
     risk_assessment: Optional[str]
     recommended_actions: Optional[str]
-    diagnostic_markers: Optional[dict]
+    # diagnostic_markers: Optional[dict]
     processing_status: str
     error_message: Optional[str]
     reviewed_by: Optional[int]

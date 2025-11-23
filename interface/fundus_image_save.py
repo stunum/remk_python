@@ -145,7 +145,8 @@ def insert_fundus_image(
     thumbnail_data: str,
     user_id: int,
     image_type: Optional[str] = None,
-    acquisition_device: Optional[str] = None
+    acquisition_device: Optional[str] = None,
+    is_primary: bool = False
 ) -> int:
     """
     插入眼底图像记录到数据库
@@ -167,8 +168,8 @@ def insert_fundus_image(
             acquisition_device=acquisition_device,
             upload_status="uploaded",
             thumbnail_data=thumbnail_data,
-            created_by=user_id,
-            updated_by=user_id
+            is_primary= is_primary,
+            created_by=user_id
         )
         
         session.add(fundus_image)
@@ -240,7 +241,8 @@ async def save_image_to_local(
             thumbnail_data=thumbnail_data,
             user_id=user_id,
             image_type=request.image_type,
-            acquisition_device=request.acquisition_device
+            acquisition_device=request.acquisition_device,
+            is_primary=True
         )
         
         log.info(f"图片保存成功: ID={inserted_id}")
@@ -388,9 +390,10 @@ async def save_multi_image_to_local(
                     green_path=green_img,
                     save_path=color_img_path
                 )
-                
-                log.info(f"AI合成成功: {save_path}")
-                
+                if save_path:
+                    log.info(f"AI合成成功: {save_path}")
+                else:
+                    return error_response(msg="AI 模块处理错误！", code=400)
                 # 获取彩色图像文件大小
                 color_file_size = os.path.getsize(save_path)
                 
@@ -411,7 +414,8 @@ async def save_multi_image_to_local(
                     thumbnail_data=color_thumbnail_data,
                     user_id=user_id,
                     image_type=request.image_type,
-                    acquisition_device=request.acquisition_device
+                    acquisition_device=request.acquisition_device,
+                    is_primary=True
                 )
                 
                 # 添加彩色图像到响应列表

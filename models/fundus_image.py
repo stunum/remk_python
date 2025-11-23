@@ -22,7 +22,7 @@ class FundusImage(SQLModel, table=True):
     file_name: str = Field(max_length=255)
     file_size: Optional[int] = Field(default=None, sa_column=Column(BigInteger))
     file_format: Optional[str] = Field(default=None, max_length=20)
-    image_quality: Optional[str] = Field(default=None, max_length=20)
+    image_quality: Optional[str] = Field(default="good", max_length=20)
     resolution: Optional[str] = Field(default=None, max_length=50)
     acquisition_device: Optional[str] = Field(default=None, max_length=100)
     acquisition_parameters: Optional[dict] = Field(default=None, sa_column=Column(JSONB))

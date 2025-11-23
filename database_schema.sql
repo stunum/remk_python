@@ -252,7 +252,7 @@ CREATE TABLE fundus_images (
     file_name VARCHAR(255) NOT NULL,                           -- 文件名
     file_size BIGINT CHECK (file_size >= 0),                   -- 文件大小(字节)
     file_format VARCHAR(20),                                   -- 文件格式:JPEG/PNG/DICOM等
-    image_quality VARCHAR(20) CHECK (image_quality IN ('excellent', 'good', 'fair', 'poor')),  -- 图像质量
+    image_quality VARCHAR(20) DEFAULT 'good' CHECK (image_quality IN ('excellent', 'good', 'fair', 'poor')),  -- 图像质量
     resolution VARCHAR(50),                                    -- 分辨率
     acquisition_device VARCHAR(100),                           -- 采集设备
     acquisition_parameters JSONB,                              -- 采集参数
@@ -294,13 +294,15 @@ CREATE TABLE ai_diagnoses (
     image_id INTEGER NOT NULL REFERENCES fundus_images(id) ON DELETE CASCADE,  -- 影像ID
     ai_model_name VARCHAR(100) NOT NULL,                       -- AI模型名称
     ai_model_version VARCHAR(50),                              -- AI模型版本
+    detect_file_path VARCHAR(500) NOT NULL,                    -- 诊断图片文件路径
+    thumbnail_data TEXT,                                       -- 缩略图base64数据
     diagnosis_result JSONB NOT NULL,                           -- 诊断结果(JSON格式)
+    -- diagnostic_markers JSONB,                                  -- 诊断标记点坐标
     confidence_score DECIMAL(5,4) CHECK (confidence_score >= 0 AND confidence_score <= 1),  -- 置信度分数(0-1)
     processing_time_ms INTEGER,                                -- 处理时间(毫秒)
     severity_level VARCHAR(20) CHECK (severity_level IN ('normal', 'mild', 'moderate', 'severe', 'critical')),  -- 严重程度
     risk_assessment TEXT,                                     -- 风险评估
     recommended_actions TEXT,                                 -- 推荐措施
-    diagnostic_markers JSONB,                                 -- 诊断标记点坐标
     processing_status VARCHAR(20) DEFAULT 'completed' CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed', 'timeout')),  -- 处理状态
     error_message TEXT,                                       -- 错误信息
     reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- 审核医生ID
@@ -316,13 +318,15 @@ COMMENT ON COLUMN ai_diagnoses.id IS 'AI诊断记录ID';
 COMMENT ON COLUMN ai_diagnoses.image_id IS '影像ID';
 COMMENT ON COLUMN ai_diagnoses.ai_model_name IS 'AI模型名称';
 COMMENT ON COLUMN ai_diagnoses.ai_model_version IS 'AI模型版本';
+COMMENT ON COLUMN ai_diagnoses.detect_file_path IS '诊断图片文件路径';
+COMMENT ON COLUMN ai_diagnoses.thumbnail_data IS '缩略图base64数据';
 COMMENT ON COLUMN ai_diagnoses.diagnosis_result IS '诊断结果(JSON格式)';
 COMMENT ON COLUMN ai_diagnoses.confidence_score IS '置信度分数(0-1)';
 COMMENT ON COLUMN ai_diagnoses.processing_time_ms IS '处理时间(毫秒)';
 COMMENT ON COLUMN ai_diagnoses.severity_level IS '严重程度';
 COMMENT ON COLUMN ai_diagnoses.risk_assessment IS '风险评估';
 COMMENT ON COLUMN ai_diagnoses.recommended_actions IS '推荐措施';
-COMMENT ON COLUMN ai_diagnoses.diagnostic_markers IS '诊断标记点坐标';
+-- COMMENT ON COLUMN ai_diagnoses.diagnostic_markers IS '诊断标记点坐标';
 COMMENT ON COLUMN ai_diagnoses.processing_status IS '处理状态';
 COMMENT ON COLUMN ai_diagnoses.error_message IS '错误信息';
 COMMENT ON COLUMN ai_diagnoses.reviewed_by IS '审核医生ID';
