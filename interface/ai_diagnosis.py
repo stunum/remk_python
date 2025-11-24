@@ -30,6 +30,7 @@ class AIDiagnosisCreate(BaseModel):
     ai_model_name: str = PydanticField(..., min_length=1, max_length=100, description="AI模型名称")
     ai_model_version: Optional[str] = PydanticField(None, max_length=50, description="AI模型版本")
     detect_file_path: str = PydanticField(..., min_length=1,max_length=500, description="诊断文件路径")
+    detect_file_name: str =PydanticField(..., min_length=1,max_length=500, description="诊断文件名")
     thumbnail_data: Optional[str] = PydanticField(None, description="缩略图数据")
     diagnosis_result: dict = PydanticField(..., description="诊断结果（JSON）")
     confidence_score: Optional[Decimal] = PydanticField(None, ge=0, le=1, description="置信度分数（0-1）")
@@ -84,6 +85,7 @@ class AIDiagnosisUpdate(BaseModel):
     ai_model_name: Optional[str] = PydanticField(None, min_length=1, max_length=100, description="AI模型名称")
     ai_model_version: Optional[str] = PydanticField(None, max_length=50, description="AI模型版本")
     detect_file_path: str = PydanticField(..., min_length=1,max_length=500, description="诊断文件路径")
+    detect_file_name: str =PydanticField(..., min_length=1,max_length=500, description="诊断文件名")
     thumbnail_data: Optional[str] = PydanticField(None, description="缩略图数据")
     diagnosis_result: Optional[dict] = PydanticField(None, description="诊断结果（JSON）")
     confidence_score: Optional[Decimal] = PydanticField(None, ge=0, le=1, description="置信度分数（0-1）")
@@ -124,6 +126,7 @@ class AIDiagnosisResponse(BaseModel):
     ai_model_name: str
     ai_model_version: Optional[str]
     detect_file_path: str
+    detect_file_name: str
     thumbnail_data: Optional[str]
     diagnosis_result: dict
     confidence_score: Optional[Decimal]
@@ -329,7 +332,6 @@ async def get_ai_diagnosis(
 @router.get("/by-image/{image_id}", response_model=ResponseModel, summary="根据图像ID查询AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_VIEW'))])
 async def get_ai_diagnoses_by_image(
     image_id: int,
-    include_deleted: bool = Query(False, description="是否包含已删除记录"),
     session: Session = Depends(get_db)
 ):
     """
@@ -338,29 +340,17 @@ async def get_ai_diagnoses_by_image(
     - **image_id**: 图像ID
     """
     try:
-        query = session.query(AIDiagnosis).filter(AIDiagnosis.image_id == image_id)
+        diagnosis = session.query(AIDiagnosis).filter(AIDiagnosis.image_id == image_id,AIDiagnosis.deleted_at.is_(None)).first()
 
-        if not include_deleted:
-            query = query.filter(AIDiagnosis.deleted_at.is_(None))
-
-        diagnoses = query.order_by(AIDiagnosis.created_at.desc()).all()
-
-        if not diagnoses:
-            log.info(f"图像ID={image_id}没有找到AI诊断记录")
-            return success_response(
-                data={"items": [], "total": 0},
-                msg="未找到AI诊断记录"
-            )
+        if not diagnosis:
+            log.warning(f"image_id:{image_id} AI诊断不存在")
+            return error_response(msg="AI诊断不存在", code=404)
 
         # 转换为响应模型
-        diagnosis_list = [AIDiagnosisResponse.model_validate(
-            diag).model_dump() for diag in diagnoses]
+        diagnosis_info = AIDiagnosisResponse.model_validate(diagnosis).model_dump()
 
-        log.info(f"根据图像ID查询AI诊断成功: 图像ID={image_id}, 记录数={len(diagnosis_list)}")
-        return success_response(data={
-            "items": diagnosis_list,
-            "total": len(diagnosis_list)
-        })
+        log.info(f"根据图像ID查询AI诊断成功: 图像ID={image_id}, 记录={diagnosis_info}")
+        return success_response(data=diagnosis_info)
 
     except Exception as e:
         log.error(f"根据图像ID查询AI诊断失败: {str(e)}")

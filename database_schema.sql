@@ -295,6 +295,7 @@ CREATE TABLE ai_diagnoses (
     ai_model_name VARCHAR(100) NOT NULL,                       -- AI模型名称
     ai_model_version VARCHAR(50),                              -- AI模型版本
     detect_file_path VARCHAR(500) NOT NULL,                    -- 诊断图片文件路径
+    detect_file_name VARCHAR(500) NOT NULL,                    -- 诊断图片文件名
     thumbnail_data TEXT,                                       -- 缩略图base64数据
     diagnosis_result JSONB NOT NULL,                           -- 诊断结果(JSON格式)
     -- diagnostic_markers JSONB,                                  -- 诊断标记点坐标
@@ -319,6 +320,7 @@ COMMENT ON COLUMN ai_diagnoses.image_id IS '影像ID';
 COMMENT ON COLUMN ai_diagnoses.ai_model_name IS 'AI模型名称';
 COMMENT ON COLUMN ai_diagnoses.ai_model_version IS 'AI模型版本';
 COMMENT ON COLUMN ai_diagnoses.detect_file_path IS '诊断图片文件路径';
+COMMENT ON COLUMN ai_diagnoses.detect_file_name IS '诊断图片文件名';
 COMMENT ON COLUMN ai_diagnoses.thumbnail_data IS '缩略图base64数据';
 COMMENT ON COLUMN ai_diagnoses.diagnosis_result IS '诊断结果(JSON格式)';
 COMMENT ON COLUMN ai_diagnoses.confidence_score IS '置信度分数(0-1)';

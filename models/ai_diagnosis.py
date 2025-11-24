@@ -17,6 +17,7 @@ class AIDiagnosis(SQLModel, table=True):
     ai_model_name: str = Field(max_length=100)
     ai_model_version: Optional[str] = Field(default=None, max_length=50)
     detect_file_path: str = Field(max_length=500)
+    detect_file_name: str = Field(max_length=500)
     thumbnail_data: Optional[str] = Field(default=None, sa_column=Column(Text))
     diagnosis_result: dict = Field(sa_column=Column(JSONB, nullable=False))
     confidence_score: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(5, 4)))
