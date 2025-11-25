@@ -6,6 +6,8 @@ AI诊断信息管理API
 - 更新AI诊断信息
 - 删除AI诊断（单个删除、批量删除，软删除）
 """
+from ai.ai_detect_img import ai_detect
+import pathlib
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
@@ -18,38 +20,73 @@ from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
 from utils.jwt_auth import get_current_user_info, require_permission
-
+from utils.imags import compress_to_dataurl
 router = APIRouter()
 
 
 # ==================== Pydantic 模型定义 ====================
 
+class ImageInfo(BaseModel):
+    image_id: int = PydanticField(..., gt=0, description="图像ID")
+    detect_file_path: str = PydanticField(..., min_length=1,
+                                          max_length=500, description="诊断文件路径")
+    detect_file_name: str = PydanticField(..., min_length=1,
+                                          max_length=500, description="诊断文件名")
+
+
+class DetectImg(BaseModel):
+    """诊断图片"""
+    images: List[ImageInfo]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "images": [
+                    {
+                        "image_id": 1,
+                        "detect_file_path": "C:\\Users\\Administrator\\Desktop\\remk\\2025-06-18",
+                        "detect_file_name": "150447_OD_color.jpg"
+                    }
+                ]
+            }
+        }
+
+
 class AIDiagnosisCreate(BaseModel):
     """AI诊断创建模型"""
     image_id: int = PydanticField(..., gt=0, description="图像ID")
-    ai_model_name: str = PydanticField(..., min_length=1, max_length=100, description="AI模型名称")
-    ai_model_version: Optional[str] = PydanticField(None, max_length=50, description="AI模型版本")
-    detect_file_path: str = PydanticField(..., min_length=1,max_length=500, description="诊断文件路径")
-    detect_file_name: str =PydanticField(..., min_length=1,max_length=500, description="诊断文件名")
+    ai_model_name: Optional[str]  = PydanticField(None,
+                                       max_length=100, description="AI模型名称")
+    ai_model_version: Optional[str] = PydanticField(
+        None, max_length=50, description="AI模型版本")
+    detect_file_path: str = PydanticField(..., min_length=1,
+                                          max_length=500, description="诊断文件路径")
+    detect_file_name: str = PydanticField(..., min_length=1,
+                                          max_length=500, description="诊断文件名")
     thumbnail_data: Optional[str] = PydanticField(None, description="缩略图数据")
-    diagnosis_result: dict = PydanticField(..., description="诊断结果（JSON）")
-    confidence_score: Optional[Decimal] = PydanticField(None, ge=0, le=1, description="置信度分数（0-1）")
-    processing_time_ms: Optional[int] = PydanticField(None, ge=0, description="处理时间（毫秒）")
+    labers: dict = PydanticField(..., description="框选标签")
+    diagnosis_result: Optional[dict] = PydanticField(None, description="诊断结果（JSON）")
+    confidence_score: Optional[Decimal] = PydanticField(
+        None, ge=0, le=1, description="置信度分数（0-1）")
+    processing_time_ms: Optional[int] = PydanticField(
+        None, ge=0, description="处理时间（毫秒）")
     severity_level: Optional[str] = PydanticField(
-        None, 
+        None,
         description="严重程度：normal/mild/moderate/severe/critical"
     )
     risk_assessment: Optional[str] = PydanticField(None, description="风险评估")
-    recommended_actions: Optional[str] = PydanticField(None, description="推荐行动")
-    # diagnostic_markers: Optional[dict] = PydanticField(None, description="诊断标记（JSON）")
+    recommended_actions: Optional[str] = PydanticField(
+        None, description="推荐行动")
+    diagnostic_markers: Optional[dict] = PydanticField(
+        None, description="诊断标记（JSON）")
     processing_status: str = PydanticField(
-        default='completed', 
+        default='completed',
         description="处理状态：pending/processing/completed/failed/timeout"
     )
     error_message: Optional[str] = PydanticField(None, description="错误消息")
     reviewed_by: Optional[int] = PydanticField(None, gt=0, description="审核人ID")
     review_status: str = PydanticField(
-        default='pending', 
+        default='pending',
         description="审核状态：pending/approved/rejected/modified"
     )
     review_comments: Optional[str] = PydanticField(None, description="审核评论")
@@ -70,10 +107,10 @@ class AIDiagnosisCreate(BaseModel):
                 "severity_level": "mild",
                 "risk_assessment": "低风险，建议定期复查",
                 "recommended_actions": "3个月后复查",
-                # "diagnostic_markers": {
-                #     "microaneurysms": 5,
-                #     "hemorrhages": 2
-                # },
+                "diagnostic_markers": {
+                    "microaneurysms": 5,
+                    "hemorrhages": 2
+                },
                 "processing_status": "completed",
                 "review_status": "pending"
             }
@@ -82,29 +119,38 @@ class AIDiagnosisCreate(BaseModel):
 
 class AIDiagnosisUpdate(BaseModel):
     """AI诊断更新模型"""
-    ai_model_name: Optional[str] = PydanticField(None, min_length=1, max_length=100, description="AI模型名称")
-    ai_model_version: Optional[str] = PydanticField(None, max_length=50, description="AI模型版本")
-    detect_file_path: str = PydanticField(..., min_length=1,max_length=500, description="诊断文件路径")
-    detect_file_name: str =PydanticField(..., min_length=1,max_length=500, description="诊断文件名")
+    ai_model_name: Optional[str] = PydanticField(
+        None, max_length=100, description="AI模型名称")
+    ai_model_version: Optional[str] = PydanticField(
+        None, max_length=50, description="AI模型版本")
+    detect_file_path: str = PydanticField(..., min_length=1,
+                                          max_length=500, description="诊断文件路径")
+    detect_file_name: str = PydanticField(..., min_length=1,
+                                          max_length=500, description="诊断文件名")
     thumbnail_data: Optional[str] = PydanticField(None, description="缩略图数据")
-    diagnosis_result: Optional[dict] = PydanticField(None, description="诊断结果（JSON）")
-    confidence_score: Optional[Decimal] = PydanticField(None, ge=0, le=1, description="置信度分数（0-1）")
-    processing_time_ms: Optional[int] = PydanticField(None, ge=0, description="处理时间（毫秒）")
+    diagnosis_result: Optional[dict] = PydanticField(
+        None, description="诊断结果（JSON）")
+    confidence_score: Optional[Decimal] = PydanticField(
+        None, ge=0, le=1, description="置信度分数（0-1）")
+    processing_time_ms: Optional[int] = PydanticField(
+        None, ge=0, description="处理时间（毫秒）")
     severity_level: Optional[str] = PydanticField(
-        None, 
+        None,
         description="严重程度：normal/mild/moderate/severe/critical"
     )
     risk_assessment: Optional[str] = PydanticField(None, description="风险评估")
-    recommended_actions: Optional[str] = PydanticField(None, description="推荐行动")
-    # diagnostic_markers: Optional[dict] = PydanticField(None, description="诊断标记（JSON）")
+    recommended_actions: Optional[str] = PydanticField(
+        None, description="推荐行动")
+    diagnostic_markers: Optional[dict] = PydanticField(
+        None, description="诊断标记（JSON）")
     processing_status: Optional[str] = PydanticField(
-        None, 
+        None,
         description="处理状态：pending/processing/completed/failed/timeout"
     )
     error_message: Optional[str] = PydanticField(None, description="错误消息")
     reviewed_by: Optional[int] = PydanticField(None, gt=0, description="审核人ID")
     review_status: Optional[str] = PydanticField(
-        None, 
+        None,
         description="审核状态：pending/approved/rejected/modified"
     )
     review_comments: Optional[str] = PydanticField(None, description="审核评论")
@@ -123,18 +169,18 @@ class AIDiagnosisResponse(BaseModel):
     """AI诊断响应模型"""
     id: int
     image_id: int
-    ai_model_name: str
+    ai_model_name: Optional[str]
     ai_model_version: Optional[str]
     detect_file_path: str
     detect_file_name: str
     thumbnail_data: Optional[str]
-    diagnosis_result: dict
+    diagnosis_result: Optional[dict]
     confidence_score: Optional[Decimal]
     processing_time_ms: Optional[int]
     severity_level: Optional[str]
     risk_assessment: Optional[str]
     recommended_actions: Optional[str]
-    # diagnostic_markers: Optional[dict]
+    diagnostic_markers: Optional[dict]
     processing_status: str
     error_message: Optional[str]
     reviewed_by: Optional[int]
@@ -162,6 +208,54 @@ class AIDiagnosisDeleteRequest(BaseModel):
 
 
 # ==================== API 端点 ====================
+@router.post("/detect", response_model=ResponseModel, summary="AI诊断", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_CREATE'))])
+async def AI_detect(
+    detect_img: DetectImg,
+    session: Session = Depends(get_db)
+):
+    detect_img_li = detect_img.model_dump()['images']
+    log.debug(f"detect_img_li={detect_img_li}")
+    detect_res = ai_detect(detect_img_li)
+    if detect_res is None:
+        log.info(f"图片AI诊断失败")
+        return error_response(
+            msg="图片AI诊断失败"
+        )
+    return_res = []
+    for idx, img_info in enumerate(detect_res["imgs"]):
+        file_path = str(pathlib.Path(img_info['detected']['file_path']).joinpath(
+            img_info['detected']["file_name"]))
+        thumbnail_data = compress_to_dataurl(file_path, 512, 50)
+        # 创建新诊断记录
+        create_info = {
+            "image_id": img_info["image_id"],
+            "detect_file_path": str(img_info['detected']['file_path']),
+            "detect_file_name": img_info['detected']["file_name"],
+            "thumbnail_data": thumbnail_data,
+            "diagnostic_markers": {
+                "labels": img_info['detected']["labels"]
+            }
+        }
+        try:
+            db_diagnosis = AIDiagnosis(**create_info)
+            session.add(db_diagnosis)
+            session.commit()
+            session.refresh(db_diagnosis)
+        except Exception as e:
+            session.rollback()
+            return error_response(
+                msg="图片AI诊断数据创建失败"
+            )
+        create_info["id"] = db_diagnosis.id
+        create_info["is_primary"] = img_info['detected']["is_primary"]
+        return_res.append(create_info)
+    # 排序。主图在前
+    return_res.sort(key=lambda x: x["is_primary"], reverse=True)
+    return success_response(
+        data={"detect_img_li": return_res},
+        msg="图片AI诊断成功"
+    )
+
 
 @router.post("/", response_model=ResponseModel, summary="创建AI诊断记录", dependencies=[Depends(get_current_user_info), Depends(require_permission('DIAGNOSIS_CREATE'))])
 async def create_ai_diagnosis(
@@ -184,7 +278,8 @@ async def create_ai_diagnosis(
         session.commit()
         session.refresh(db_diagnosis)
 
-        log.info(f"成功创建AI诊断记录: ID={db_diagnosis.id}, 图像ID={db_diagnosis.image_id}")
+        log.info(
+            f"成功创建AI诊断记录: ID={db_diagnosis.id}, 图像ID={db_diagnosis.image_id}")
         return success_response(
             data=AIDiagnosisResponse.model_validate(db_diagnosis).model_dump(),
             msg="AI诊断记录创建成功"
@@ -232,19 +327,24 @@ async def get_ai_diagnoses(
             count_query = count_query.filter(AIDiagnosis.image_id == image_id)
 
         if ai_model_name:
-            count_query = count_query.filter(AIDiagnosis.ai_model_name == ai_model_name)
+            count_query = count_query.filter(
+                AIDiagnosis.ai_model_name == ai_model_name)
 
         if processing_status:
-            count_query = count_query.filter(AIDiagnosis.processing_status == processing_status)
+            count_query = count_query.filter(
+                AIDiagnosis.processing_status == processing_status)
 
         if review_status:
-            count_query = count_query.filter(AIDiagnosis.review_status == review_status)
+            count_query = count_query.filter(
+                AIDiagnosis.review_status == review_status)
 
         if severity_level:
-            count_query = count_query.filter(AIDiagnosis.severity_level == severity_level)
+            count_query = count_query.filter(
+                AIDiagnosis.severity_level == severity_level)
 
         if reviewed_by:
-            count_query = count_query.filter(AIDiagnosis.reviewed_by == reviewed_by)
+            count_query = count_query.filter(
+                AIDiagnosis.reviewed_by == reviewed_by)
 
         # 计算总数
         total = count_query.count()
@@ -260,19 +360,24 @@ async def get_ai_diagnoses(
             data_query = data_query.filter(AIDiagnosis.image_id == image_id)
 
         if ai_model_name:
-            data_query = data_query.filter(AIDiagnosis.ai_model_name == ai_model_name)
+            data_query = data_query.filter(
+                AIDiagnosis.ai_model_name == ai_model_name)
 
         if processing_status:
-            data_query = data_query.filter(AIDiagnosis.processing_status == processing_status)
+            data_query = data_query.filter(
+                AIDiagnosis.processing_status == processing_status)
 
         if review_status:
-            data_query = data_query.filter(AIDiagnosis.review_status == review_status)
+            data_query = data_query.filter(
+                AIDiagnosis.review_status == review_status)
 
         if severity_level:
-            data_query = data_query.filter(AIDiagnosis.severity_level == severity_level)
+            data_query = data_query.filter(
+                AIDiagnosis.severity_level == severity_level)
 
         if reviewed_by:
-            data_query = data_query.filter(AIDiagnosis.reviewed_by == reviewed_by)
+            data_query = data_query.filter(
+                AIDiagnosis.reviewed_by == reviewed_by)
 
         # 分页
         offset = (page - 1) * page_size
@@ -340,14 +445,16 @@ async def get_ai_diagnoses_by_image(
     - **image_id**: 图像ID
     """
     try:
-        diagnosis = session.query(AIDiagnosis).filter(AIDiagnosis.image_id == image_id,AIDiagnosis.deleted_at.is_(None)).first()
+        diagnosis = session.query(AIDiagnosis).filter(
+            AIDiagnosis.image_id == image_id, AIDiagnosis.deleted_at.is_(None)).first()
 
         if not diagnosis:
             log.warning(f"image_id:{image_id} AI诊断不存在")
             return error_response(msg="AI诊断不存在", code=404)
 
         # 转换为响应模型
-        diagnosis_info = AIDiagnosisResponse.model_validate(diagnosis).model_dump()
+        diagnosis_info = AIDiagnosisResponse.model_validate(
+            diagnosis).model_dump()
 
         log.info(f"根据图像ID查询AI诊断成功: 图像ID={image_id}, 记录={diagnosis_info}")
         return success_response(data=diagnosis_info)

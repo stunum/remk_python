@@ -292,13 +292,13 @@ COMMENT ON COLUMN fundus_images.created_by IS '创建人';
 CREATE TABLE ai_diagnoses (
     id SERIAL PRIMARY KEY,                                     -- AI诊断记录ID
     image_id INTEGER NOT NULL REFERENCES fundus_images(id) ON DELETE CASCADE,  -- 影像ID
-    ai_model_name VARCHAR(100) NOT NULL,                       -- AI模型名称
+    ai_model_name VARCHAR(100),                                -- AI模型名称
     ai_model_version VARCHAR(50),                              -- AI模型版本
     detect_file_path VARCHAR(500) NOT NULL,                    -- 诊断图片文件路径
     detect_file_name VARCHAR(500) NOT NULL,                    -- 诊断图片文件名
     thumbnail_data TEXT,                                       -- 缩略图base64数据
-    diagnosis_result JSONB NOT NULL,                           -- 诊断结果(JSON格式)
-    -- diagnostic_markers JSONB,                                  -- 诊断标记点坐标
+    diagnosis_result JSONB,                           -- 诊断结果(JSON格式)
+    diagnostic_markers JSONB,                                  -- 诊断标记点坐标
     confidence_score DECIMAL(5,4) CHECK (confidence_score >= 0 AND confidence_score <= 1),  -- 置信度分数(0-1)
     processing_time_ms INTEGER,                                -- 处理时间(毫秒)
     severity_level VARCHAR(20) CHECK (severity_level IN ('normal', 'mild', 'moderate', 'severe', 'critical')),  -- 严重程度
@@ -328,7 +328,7 @@ COMMENT ON COLUMN ai_diagnoses.processing_time_ms IS '处理时间(毫秒)';
 COMMENT ON COLUMN ai_diagnoses.severity_level IS '严重程度';
 COMMENT ON COLUMN ai_diagnoses.risk_assessment IS '风险评估';
 COMMENT ON COLUMN ai_diagnoses.recommended_actions IS '推荐措施';
--- COMMENT ON COLUMN ai_diagnoses.diagnostic_markers IS '诊断标记点坐标';
+COMMENT ON COLUMN ai_diagnoses.diagnostic_markers IS '诊断标记点坐标';
 COMMENT ON COLUMN ai_diagnoses.processing_status IS '处理状态';
 COMMENT ON COLUMN ai_diagnoses.error_message IS '错误信息';
 COMMENT ON COLUMN ai_diagnoses.reviewed_by IS '审核医生ID';
