@@ -219,7 +219,7 @@ def ai_detect(image_paths):
         model = ort.InferenceSession(model_path, providers=providers)
         # 获取模型输入名称
         model_input_name = model.get_inputs()[0].name
-        log.info(f"成功加载ONNX模型: {model_path}")
+        log.info(f"成功加载ONNX模型: {model_input_name} 路径:{model_path}")
     except Exception as e:
         log.error(f"ONNX模型加载失败: {e}")
         return None
@@ -259,9 +259,7 @@ def ai_detect(image_paths):
             img_resized = np.expand_dims(img_resized, axis=0)  # 添加batch维度
 
             # 执行推理
-            outputs = model.run(
-                None, {model_input_name: img_resized.astype(np.float32)})
-
+            outputs = model.run(None, {model_input_name: img_resized.astype(np.float32)})
             # 处理输出结果（参照inference_onnx.py）
             pred = outputs[0]
             pred = np.squeeze(pred)
@@ -279,7 +277,7 @@ def ai_detect(image_paths):
             boxes = []
             class_ids = []
             scores = []
-
+            log.debug(f"result={result}")
             for detect in result:
                 # 转换坐标：中心点+宽高 -> 左上角+右下角，并映射回原始图像尺寸
                 cx, cy, w, h, conf, cls_id = detect
@@ -297,7 +295,8 @@ def ai_detect(image_paths):
                 boxes.append([x1, y1, x2, y2])
                 class_ids.append(int(cls_id))
                 scores.append(float(conf))
-
+            log.debug(
+                f"detect_file_name={img_info['detect_file_name']}  boxes={boxes}")
             # OpenCV 画框
             for box, cls_id in zip(boxes, class_ids):
                 x1, y1, x2, y2 = map(int, box)
@@ -311,9 +310,7 @@ def ai_detect(image_paths):
 
             for box, cls_id, score in zip(boxes, class_ids, scores):
                 x1, y1, x2, y2 = map(int, box)
-                label = f"{id2name.get(cls_id, str(cls_id))} {score:.2f}"
                 color = yolo_colors(cls_id)
-                color_rgb = tuple(color)
 
             source_file = pathlib.Path(path)
             save_dir = source_file.parent
@@ -352,6 +349,7 @@ def ai_detect(image_paths):
 
     # -------------------- 叠加到彩色图 --------------------
     if color_img_idx is None:
+        log.debug(f"无彩图 image_paths={image_paths}")
         return {
             "imgs": image_paths
         }
@@ -367,14 +365,14 @@ def ai_detect(image_paths):
 
     # 画中文标签
     if aggregated_boxes:
+        log.debug(
+            f"彩色图 detect_file_name={image_paths[color_img_idx]['detect_file_name']}  boxes={aggregated_boxes}")
         img_pil = Image.fromarray(cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB))
         ImageDraw.Draw(img_pil)
 
         for box, cls_id, score in zip(aggregated_boxes, aggregated_cls_ids, aggregated_scores):
             x1, y1, x2, y2 = map(int, box)
-            label = f"{id2name.get(int(cls_id), str(cls_id))} {score:.2f}"
             color = yolo_colors(int(cls_id))
-            color_rgb = tuple(color)
 
         img_color = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
@@ -396,6 +394,7 @@ def ai_detect(image_paths):
         "labels": c_label_map,
         "is_primary": True
     }
+    log.debug(f"image_paths={image_paths}")
     return {
         "imgs": image_paths
     }
@@ -403,8 +402,20 @@ def ai_detect(image_paths):
 
 if __name__ == "__main__":
     image_paths = [
-        "C:\\Users\\Administrator\\Desktop\\remk\\2025-06-18\\150447_OD_color.jpg",
-        "C:\\Users\\Administrator\\Desktop\\remk\\2025-06-18\\150447_OD_G.jpg"
+        {
+            "image_id": 1,
+            "detect_file_path": "/Users/stunum/Downloads/阅片/Ai_results/00906241金浩/",
+            "detect_file_name": "test_1_color.jpg"
+        },
+        {
+            "image_id": 2,
+            "detect_file_path": "/Users/stunum/Downloads/阅片/Ai_results/00906241金浩/",
+            "detect_file_name": "test_1_g.jpg"
+        },
+        {
+            "image_id": 3,
+            "detect_file_path": "/Users/stunum/Downloads/阅片/Ai_results/00906241金浩/",
+            "detect_file_name": "test_1_R.jpg"
+        }
     ]
-    res = ai_detect(image_paths)
-    print(res)
+    ai_detect(image_paths)
