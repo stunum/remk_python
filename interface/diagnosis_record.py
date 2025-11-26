@@ -185,7 +185,10 @@ async def create_diagnosis_record(
         session.add(db_diagnosis_record)
         session.commit()
         session.refresh(db_diagnosis_record)
-        
+        examination.status="completed"
+        session.commit()
+        session.refresh(examination)
+
         log.info(f"成功创建诊断记录: ID={db_diagnosis_record.id}, 诊断名称={db_diagnosis_record.diagnosis_name}")
         return success_response(
             data=DiagnosisRecordResponse.model_validate(db_diagnosis_record).model_dump(),
