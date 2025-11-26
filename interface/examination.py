@@ -19,6 +19,8 @@ from models.patient import Patient
 from interface.patient import PatientResponse
 from models.user import User
 from models.fundus_image import FundusImage
+from models.diagnosis_record import DiagnosisRecord
+from interface.diagnosis_record import DiagnosisRecordResponse
 from database import get_db
 from utils.response import success_response, error_response, ResponseModel
 from loguru_logging import log
@@ -561,7 +563,15 @@ async def get_examination(
             if technician:
                 exam_dict['technician'] = UserInfo.model_validate(
                     technician).model_dump()
-
+        # 查询关联的诊断记录
+        diagnosis_record_res = session.query(DiagnosisRecord).filter(
+            DiagnosisRecord.examination_id==examination_id,
+            FundusImage.deleted_at.is_(None)
+        ).order_by(DiagnosisRecord.updated_at.desc()).all()
+        if diagnosis_record_res:
+            exam_dict['diagnosis_records']=[ DiagnosisRecordResponse.model_validate(record).model_dump() for record in diagnosis_record_res]
+            
+            # [DiagnosisRecordResponse.model_validate(diagnosis_record_res).model_dump()]
         # 查询关联的眼底图像
         fundus_images = session.query(FundusImage).filter(
             FundusImage.examination_id == examination_id,
