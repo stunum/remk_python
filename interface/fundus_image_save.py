@@ -97,7 +97,7 @@ def img_path_to_base64(img_path: str, quality: int = 40) -> str:
             buffer.seek(0)
             
             # 转换为base64
-            thumbnail_data = base64.b64encode(buffer.read()).decode('utf-8')
+            thumbnail_data =f"data:image/jpeg;base64,{base64.b64encode(buffer.read()).decode('utf-8')}" 
             return thumbnail_data
             
     except Exception as e:
