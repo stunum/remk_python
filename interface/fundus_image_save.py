@@ -287,15 +287,6 @@ async def save_image_to_local(
     except Exception as e:
         session.rollback()
         log.error(f"保存图片失败: {str(e)}")
-
-        # 如果数据库保存失败，尝试删除文件
-        try:
-            if os.path.exists(full_path):
-                os.remove(full_path)
-                log.info(f"已清理失败的文件: {full_path}")
-        except:
-            pass
-
         return error_response(msg=f"保存图像记录失败: {str(e)}", code=500)
 
 
@@ -537,20 +528,12 @@ async def hande_save_image(
         except Exception as e:
             session.rollback()
             log.error(f"保存图片失败: {str(e)}")
-
-            # 如果数据库保存失败，尝试删除文件
-            try:
-                if full_path.exists():
-                    full_path.unlink()
-                    log.info(f"已清理失败的文件: {full_path}")
-            except Exception as e:
-                log.error(f"参数错误: {str(e)}")
             return error_response(msg=f"保存图像记录失败: {str(e)}", code=500)
     else:
         # 多摄
         try:
             log.info(
-                f"保存多张图片: examination_id={request.examination_id}, 图片数量={len(request.image_name)}")
+                f"保存多张图片: examination_id={request.examination_id}, 图片数量={len(request.file)}")
             # 初始化响应数据
             color_mode_response = {
                 "capture_mode": request.mode,
