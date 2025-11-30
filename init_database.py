@@ -472,16 +472,16 @@ def ensure_database_exists() -> None:
             ).scalar()
             if not exists:
                 connection.execute(text(f'CREATE DATABASE "{TARGET_DB}"'))
-                print(f"✅ 已创建数据库 {TARGET_DB}")
+                print(f"已创建数据库 {TARGET_DB}")
             else:
-                print(f"ℹ️ 数据库 {TARGET_DB} 已存在，跳过创建")
+                print(f"数据库 {TARGET_DB} 已存在，跳过创建")
     finally:
         admin_engine.dispose()
 
 
 def create_tables(engine: Engine) -> None:
     SQLModel.metadata.create_all(engine)
-    print("✅ 已根据模型创建/更新所有数据表")
+    print("已根据模型创建/更新所有数据表")
 
 
 def init_admin_user(session: Session) -> User:
@@ -489,7 +489,7 @@ def init_admin_user(session: Session) -> User:
         select(User).where(User.username == DEFAULT_ADMIN_PROFILE["username"])
     ).first()
     if admin_user:
-        print("ℹ️ 管理员账号已存在，跳过创建")
+        print("管理员账号已存在，跳过创建")
         return admin_user
 
     frontend_hash = hashlib.sha256(
@@ -506,10 +506,10 @@ def init_admin_user(session: Session) -> User:
     session.add(admin_user)
     session.flush()
     print(
-        f"ℹ️ 管理员初始密码: {DEFAULT_ADMIN_PASSWORD} "
+        f"管理员初始密码: {DEFAULT_ADMIN_PASSWORD} "
         f"(前端哈希: {frontend_hash})"
     )
-    print("✅ 已创建管理员账号")
+    print("已创建管理员账号")
     return admin_user
 
 
@@ -525,9 +525,9 @@ def init_roles(session: Session) -> Dict[str, Role]:
         session.add(role)
         session.flush()
         existing_roles[role_code] = role
-        print(f"✅ 已创建角色 {role_code}")
+        print(f"已创建角色 {role_code}")
     if not DEFAULT_ROLES:
-        print("ℹ️ 无需创建角色")
+        print("无需创建角色")
     return existing_roles
 
 
@@ -547,7 +547,7 @@ def init_permissions(session: Session) -> Dict[str, Permission]:
         session.add(permission)
         session.flush()
         existing_permissions[perm_code] = permission
-        print(f"✅ 已创建权限 {perm_code}")
+        print(f"已创建权限 {perm_code}")
     return existing_permissions
 
 
@@ -567,7 +567,7 @@ def init_examination_types(session: Session) -> None:
         )
         session.add(exam_type)
         session.flush()
-        print(f"✅ 已创建检查类型 {type_code}")
+        print(f"已创建检查类型 {type_code}")
 
 
 def init_user_roles(session: Session, admin_user: User, admin_role: Role) -> None:
@@ -580,11 +580,11 @@ def init_user_roles(session: Session, admin_user: User, admin_role: Role) -> Non
         )
     ).first()
     if exists:
-        print("ℹ️ 管理员角色已分配给管理员账号")
+        print("管理员角色已分配给管理员账号")
         return
     user_role = UserRole(user_id=admin_user.id, role_id=admin_role.id, is_active=True)
     session.add(user_role)
-    print("✅ 已为管理员账号分配管理员角色")
+    print("已为管理员账号分配管理员角色")
 
 
 def init_role_permissions(
@@ -609,9 +609,9 @@ def init_role_permissions(
         session.add(role_perm)
         created_count += 1
     if created_count:
-        print(f"✅ 已为管理员角色新增 {created_count} 条权限关联")
+        print(f"已为管理员角色新增 {created_count} 条权限关联")
     else:
-        print("ℹ️ 管理员角色已拥有所有权限")
+        print("管理员角色已拥有所有权限")
 
 
 def init_database_data() -> None:
@@ -635,9 +635,9 @@ def init_database_data() -> None:
             init_role_permissions(session, admin_role, permissions.values())
 
             session.commit()
-            print("🎉 数据初始化完成")
+            print("数据初始化完成")
     except ProgrammingError as exc:
-        print(f"❌ 数据库操作失败: {exc}")
+        print(f"数据库操作失败: {exc}")
         raise
     finally:
         engine.dispose()

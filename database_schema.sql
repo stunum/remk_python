@@ -619,7 +619,7 @@ CREATE INDEX idx_role_permissions_deleted_at ON role_permissions(deleted_at) WHE
 CREATE INDEX idx_system_logs_user_id ON system_logs(user_id);
 CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
 
--- ✅ 创建部分唯一索引：仅在 deleted_at IS NULL 时生效
+-- 创建部分唯一索引：仅在 deleted_at IS NULL 时生效
 CREATE UNIQUE INDEX idx_user_roles_unique_active
 ON user_roles(user_id, role_id)
 WHERE deleted_at IS NULL;

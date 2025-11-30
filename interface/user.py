@@ -214,7 +214,7 @@ def delete_users(delete_request: UserDeleteRequest, db: Session = Depends(get_db
     # 执行软删除
     deleted_count = 0
     for user in users:
-        user.deleted_at = datetime.now()  # ✅ 使用 Python datetime 对象
+        user.deleted_at = datetime.now()  # 使用 Python datetime 对象
         if delete_request.deleted_by:
             user.updated_by = delete_request.deleted_by
         deleted_count += 1

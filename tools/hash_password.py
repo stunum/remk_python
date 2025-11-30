@@ -58,7 +58,7 @@ def main():
         password = input("请输入要加密的密码: ")
     
     if not password:
-        print("❌ 密码不能为空")
+        print("密码不能为空")
         sys.exit(1)
     
     # 计算哈希
