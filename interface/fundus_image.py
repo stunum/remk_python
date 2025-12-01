@@ -8,6 +8,7 @@
 """
 from typing import Optional, List
 from datetime import datetime
+from collections import defaultdict
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field as PydanticField
@@ -197,6 +198,73 @@ async def create_fundus_image(
         return error_response(msg=f"创建眼底图像记录失败: {str(e)}", code=500)
 
 
+@router.get("/by_examination_id/{examination_id}", response_model=ResponseModel, summary="查询指定检查的所有眼底图像（按image_number分组）", dependencies=[Depends(get_current_user_info), Depends(require_permission('IMAGE_VIEW'))])
+async def get_fundus_images_by_examination_id(
+    examination_id: int,
+    session: Session = Depends(get_db)
+):
+    """
+    根据检查ID查询该检查下的所有眼底图像，按image_number分组
+    每个image_number包含该组的所有图片信息
+    
+    - **examination_id**: 检查记录ID
+    
+    返回格式：
+    {
+        "items": [
+            {
+                "image_number": "FI...",
+                "images": [
+                    {...图片1信息...},
+                    {...图片2信息...},
+                    ...
+                ]
+            }
+        ]
+    }
+    """
+    try:
+        # 查询该检查下的所有未删除的眼底图像
+        # 按image_number和is_primary、创建时间排序
+        all_images = session.query(FundusImage).filter(
+            FundusImage.examination_id == examination_id,
+            FundusImage.deleted_at.is_(None)
+        ).order_by(
+            FundusImage.created_at.desc(),    # 相同is_primary时，最新的在前
+            FundusImage.image_number.desc(),
+            FundusImage.is_primary.desc()  # is_primary=True的记录在前
+        ).all()
+        
+        if not all_images:
+            log.warning(f"眼底图像不存在: examination ID={examination_id}")
+            return error_response(msg="眼底图像不存在", code=404)
+        all_count = len(all_images)
+        log.debug(f"查询眼底图像成功: examination ID={examination_id} 共{all_count}张照片")
+        # 按image_number分组，每组包含所有图片
+        grouped_images = defaultdict(list)
+        for img in all_images:
+            grouped_images[img.image_number].append(img)
+        
+        # 构建返回结果
+        result_items = []
+        for _, images in sorted(grouped_images.items(),reverse=True):
+            image_list = [
+                FundusImageResponse.model_validate(img).model_dump()
+                for img in images
+            ]
+            result_items.append(image_list)
+        
+        log.info(f"查询眼底图像成功: examination ID={examination_id}, 共 {len(result_items)} 组（按image_number分组），总计 {len(all_images)} 张图片")
+        return success_response(data={
+            "count":all_count,
+            "image_group":result_items
+        })
+    
+    except Exception as e:
+        log.error(f"查询眼底图像失败: {str(e)}")
+        return error_response(msg=f"查询眼底图像失败: {str(e)}", code=500)
+
+
 @router.get("/", response_model=ResponseModel, summary="分页查询眼底图像", dependencies=[Depends(get_current_user_info), Depends(require_permission('IMAGE_VIEW'))])
 async def get_fundus_images(
     page: int = Query(1, ge=1, description="页码"),
@@ -230,22 +298,27 @@ async def get_fundus_images(
             count_query = count_query.filter(FundusImage.deleted_at.is_(None))
 
         if examination_id:
-            count_query = count_query.filter(FundusImage.examination_id == examination_id)
+            count_query = count_query.filter(
+                FundusImage.examination_id == examination_id)
 
         if eye_side:
             count_query = count_query.filter(FundusImage.eye_side == eye_side)
 
         if capture_mode:
-            count_query = count_query.filter(FundusImage.capture_mode == capture_mode)
+            count_query = count_query.filter(
+                FundusImage.capture_mode == capture_mode)
 
         if image_quality:
-            count_query = count_query.filter(FundusImage.image_quality == image_quality)
+            count_query = count_query.filter(
+                FundusImage.image_quality == image_quality)
 
         if upload_status:
-            count_query = count_query.filter(FundusImage.upload_status == upload_status)
+            count_query = count_query.filter(
+                FundusImage.upload_status == upload_status)
 
         if is_primary is not None:
-            count_query = count_query.filter(FundusImage.is_primary == is_primary)
+            count_query = count_query.filter(
+                FundusImage.is_primary == is_primary)
 
         # 计算总数
         total = count_query.count()
@@ -258,22 +331,27 @@ async def get_fundus_images(
             data_query = data_query.filter(FundusImage.deleted_at.is_(None))
 
         if examination_id:
-            data_query = data_query.filter(FundusImage.examination_id == examination_id)
+            data_query = data_query.filter(
+                FundusImage.examination_id == examination_id)
 
         if eye_side:
             data_query = data_query.filter(FundusImage.eye_side == eye_side)
 
         if capture_mode:
-            data_query = data_query.filter(FundusImage.capture_mode == capture_mode)
+            data_query = data_query.filter(
+                FundusImage.capture_mode == capture_mode)
 
         if image_quality:
-            data_query = data_query.filter(FundusImage.image_quality == image_quality)
+            data_query = data_query.filter(
+                FundusImage.image_quality == image_quality)
 
         if upload_status:
-            data_query = data_query.filter(FundusImage.upload_status == upload_status)
+            data_query = data_query.filter(
+                FundusImage.upload_status == upload_status)
 
         if is_primary is not None:
-            data_query = data_query.filter(FundusImage.is_primary == is_primary)
+            data_query = data_query.filter(
+                FundusImage.is_primary == is_primary)
 
         # 分页
         offset = (page - 1) * page_size

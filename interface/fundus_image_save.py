@@ -11,12 +11,12 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field as PydanticField
 
 from models.fundus_image import FundusImage
-from database import get_db
+from database import get_db, db
 from utils.response import success_response, error_response, ResponseModel
 from utils.jwt_auth import get_current_user_id
 from loguru_logging import log
@@ -209,6 +209,82 @@ def insert_fundus_image(
         raise
 
 
+def process_colorization_background(
+    ir_img: str,
+    green_img: str,
+    examination_id: int,
+    image_number: str,
+    eye_side: str,
+    capture_mode: str,
+    file_format: str,
+    user_id: int,
+    image_type: Optional[str] = None,
+    acquisition_device: Optional[str] = None
+):
+    """
+    后台任务：处理彩色图像合成并保存到数据库
+    """
+    try:
+        # 检查AI处理函数是否可用
+        try:
+            from ai.ai_process import process_colorization
+        except ImportError:
+            log.error("后台任务失败：AI模块未导入，无法处理彩色图像合成")
+            return
+
+        log.info(f"后台任务开始：AI合成彩色图像 ir={ir_img}, green={green_img}")
+
+        # 生成彩色图像文件名和路径
+        color_img_name = generate_color_filename()
+        file_dir = pathlib.Path(ir_img).parent
+        color_img_path = file_dir.joinpath(color_img_name)
+
+        # 调用本地AI处理函数（只需要IR和Green通道）
+        save_path = process_colorization(
+            ir_path=ir_img,
+            green_path=green_img,
+            save_path=str(color_img_path)
+        )
+
+        if not save_path:
+            log.error("AI合成失败：process_colorization 返回 None")
+            return
+
+        log.info(f"AI合成成功: {save_path}")
+
+        # 获取彩色图像文件大小
+        color_file_size = color_img_path.stat().st_size
+
+        # 转换彩色图像为Base64
+        color_thumbnail_data = img_path_to_base64(str(color_img_path))
+
+        # 创建新的数据库session用于后台任务
+        with db.session() as session:
+            # 保存彩色图像到数据库
+            color_inserted_id = insert_fundus_image(
+                session=session,
+                examination_id=examination_id,
+                image_number=image_number,
+                eye_side=eye_side,
+                capture_mode=capture_mode,
+                file_dir=str(color_img_path.parent),
+                image_name=color_img_path.name,
+                file_size=color_file_size,
+                file_format=file_format,
+                thumbnail_data=color_thumbnail_data,
+                user_id=user_id,
+                image_type=image_type,
+                acquisition_device=acquisition_device,
+                is_primary=True
+            )
+
+            log.info(f"后台任务完成：彩色图像保存成功 ID={color_inserted_id}")
+
+    except Exception as e:
+        log.error(f"后台任务失败：AI合成彩色图像时出错: {str(e)}")
+        log.exception(e)
+
+
 # ==================== API 端点 ====================
 
 @router.post("/save-image", response_model=ResponseModel, summary="保存单张图片（灰度模式）")
@@ -273,10 +349,11 @@ async def save_image_to_local(
         return success_response(
             data={
                 "id": inserted_id,
-                "image_number": image_number,
                 "image_path": full_path,
                 "thumbnailData": thumbnail_data,
-                "capture_mode": request.capture_mode
+                "eye_side": request.eye_side,
+                "image_number": image_number,
+                "is_primary": False
             },
             msg="图像保存成功"
         )
@@ -293,6 +370,7 @@ async def save_image_to_local(
 @router.post("/save-multi-image", response_model=ResponseModel, summary="保存多张图片（彩色模式）")
 async def save_multi_image_to_local(
     request: SaveMultiImageRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
 ):
@@ -381,7 +459,9 @@ async def save_multi_image_to_local(
                 "id": inserted_id,
                 "image_path": full_path,
                 "thumbnail_data": thumbnail_data,
-                "eye_side":request.eye_side
+                "eye_side": request.eye_side,
+                "image_number": image_number,
+                "is_primary": False
             })
 
             log.info(f"图片保存成功: ID={inserted_id}, 文件={img_name}")
@@ -390,72 +470,30 @@ async def save_multi_image_to_local(
         log.info(
             f"识别的通道: IR={ir_img}, Green={green_img}, Red={red_img}, Blue={blue_img}")
 
-        # 调用AI合成彩色图像
+        # 将原始图片添加到响应列表
+        color_mode_response["images"].extend(tmp_images_li)
+
+        # 如果有IR和Green通道，将AI合成任务添加到后台任务
         if ir_img and green_img:
-            log.info("开始调用AI合成彩色图像...")
-
-            # 生成彩色图像文件名和路径
-            color_img_name = generate_color_filename()
-            file_dir = pathlib.Path(ir_img).parent
-            color_img_path = file_dir.joinpath(color_img_name)
-
-            # 调用本地AI合成模块
-            try:
-                log.info(
-                    f"开始AI合成彩色图像: ir={ir_img}, green={green_img}, save={color_img_path}")
-
-                # 调用本地AI处理函数（只需要IR和Green通道）
-                save_path = process_colorization(
-                    ir_path=ir_img,
-                    green_path=green_img,
-                    save_path=str(color_img_path)
-                )
-                if save_path:
-                    log.info(f"AI合成成功: {save_path}")
-                else:
-                    return error_response(msg="AI 模块处理错误！", code=400)
-                # 获取彩色图像文件大小
-                color_file_size = color_img_path.stat().st_size
-
-                # 转换彩色图像为Base64
-                color_thumbnail_data = img_path_to_base64(str(color_img_path))
-
-                # 保存彩色图像到数据库
-                color_inserted_id = insert_fundus_image(
-                    session=session,
-                    examination_id=request.examination_id,
-                    image_number=image_number,
-                    eye_side=request.eye_side,
-                    capture_mode=request.capture_mode,
-                    file_dir=str(color_img_path.parent),
-                    image_name=color_img_path.name,
-                    file_size=color_file_size,
-                    file_format=request.file_format,
-                    thumbnail_data=color_thumbnail_data,
-                    user_id=user_id,
-                    image_type=request.image_type,
-                    acquisition_device=request.acquisition_device,
-                    is_primary=True
-                )
-
-                # 添加彩色图像到响应列表
-                color_mode_response["images"].append({
-                    "id": color_inserted_id,
-                    "image_path": save_path,
-                    "thumbnail_data": color_thumbnail_data,
-                    "eye_side":request.eye_side
-                })
-                color_mode_response["images"].extend(tmp_images_li)
-                log.info(f"彩色图像保存成功: ID={color_inserted_id}")
-
-            except Exception as e:
-                log.error(f"AI合成失败: {str(e)}")
-                # AI合成失败不影响原始图片的保存，继续返回成功
-                log.warning("AI合成失败，但原始图片已保存")
+            log.info("检测到IR和Green通道，将彩色图像合成任务添加到后台执行")
+            background_tasks.add_task(
+                process_colorization_background,
+                ir_img=ir_img,
+                green_img=green_img,
+                examination_id=request.examination_id,
+                image_number=image_number,
+                eye_side=request.eye_side,
+                capture_mode=request.capture_mode,
+                file_format=request.file_format,
+                user_id=user_id,
+                image_type=request.image_type,
+                acquisition_device=request.acquisition_device
+            )
         else:
-            log.warning("未找到完整的四个通道图片，跳过AI合成")
+            log.warning("未找到IR或Green通道图片，跳过AI合成")
 
-        log.info(f"多张图片保存完成，总计: {len(color_mode_response['images'])} 张")
+        log.info(
+            f"多张图片保存完成，总计: {len(color_mode_response['images'])} 张（彩色图像合成在后台执行）")
 
         return success_response(
             data=color_mode_response,
@@ -515,10 +553,11 @@ async def hande_save_image(
             return success_response(
                 data={
                     "id": inserted_id,
-                    "image_number": image_number,
                     "image_path": full_path,
                     "thumbnailData": thumbnail_data,
-                    "capture_mode": request.mode
+                    "image_number": image_number,
+                    "eye_side": request.eye_side,
+                    "is_primary": True
                 },
                 msg="图像保存成功"
             )
@@ -591,7 +630,10 @@ async def hande_save_image(
                 tmp_images_li.append({
                     "id": inserted_id,
                     "image_path": full_path,
-                    "thumbnail_data": thumbnail_data
+                    "thumbnail_data": thumbnail_data,
+                    "image_number": image_number,
+                    "eye_side": request.eye_side,
+                    "is_primary": False
                 })
 
                 log.info(f"图片保存成功: ID={inserted_id}, 文件={img_name}")
@@ -649,7 +691,10 @@ async def hande_save_image(
                     color_mode_response["images"].append({
                         "id": color_inserted_id,
                         "image_path": save_path,
-                        "thumbnail_data": color_thumbnail_data
+                        "thumbnail_data": color_thumbnail_data,
+                        "image_number": image_number,
+                        "eye_side": request.eye_side,
+                        "is_primary": True
                     })
                     color_mode_response["images"].extend(tmp_images_li)
                     log.info(f"彩色图像保存成功: ID={color_inserted_id}")
