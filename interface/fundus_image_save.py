@@ -167,7 +167,7 @@ def insert_fundus_image(
     file_size: int,
     file_format: str,
     thumbnail_data: str,
-    user_id: int,
+    user_id: Optional[int],
     image_type: Optional[str] = None,
     acquisition_device: Optional[str] = None,
     is_primary: bool = False
@@ -512,8 +512,7 @@ async def save_multi_image_to_local(
 @router.post("hande/save-image", response_model=ResponseModel, summary="保存多张图片（彩色模式）")
 async def hande_save_image(
     request: HandeSaveImages,
-    session: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    session: Session = Depends(get_db)
 ):
     log.info(f"request={request}")
     # 生成影像编号
@@ -545,7 +544,7 @@ async def hande_save_image(
                 file_size=file_size,
                 file_format=request.file_format,
                 thumbnail_data=thumbnail_data,
-                user_id=user_id,
+                user_id=None,
                 is_primary=True
             )
 
@@ -623,7 +622,7 @@ async def hande_save_image(
                     file_size=file_size,
                     file_format=request.file_format,
                     thumbnail_data=thumbnail_data,
-                    user_id=user_id
+                    user_id=None
                 )
 
                 # 添加到响应列表
@@ -683,7 +682,7 @@ async def hande_save_image(
                         file_size=color_file_size,
                         file_format=request.file_format,
                         thumbnail_data=color_thumbnail_data,
-                        user_id=user_id,
+                        user_id=None,
                         is_primary=True
                     )
 
