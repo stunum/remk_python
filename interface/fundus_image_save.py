@@ -509,7 +509,7 @@ async def save_multi_image_to_local(
         return error_response(msg=f"保存图像记录失败: {str(e)}", code=500)
 
 
-@router.post("hande/save-image", response_model=ResponseModel, summary="保存多张图片（彩色模式）")
+@router.post("/hande/save-image", response_model=ResponseModel, summary="保存多张图片（彩色模式）")
 async def hande_save_image(
     request: HandeSaveImages,
     session: Session = Depends(get_db)
